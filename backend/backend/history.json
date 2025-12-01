@@ -1,0 +1,28 @@
+[
+  {
+    "timestamp": "2025-12-01T10:58:29.934434",
+    "status": "SAFE",
+    "counts": {
+      "Protozoa": 0,
+      "Algae": 0,
+      "Bacteria": 1,
+      "Fungi": 0,
+      "Cyanobacteria": 0,
+      "Plant_Debris": 0,
+      "Micro_Worm": 0
+    },
+    "percentages": {
+      "Protozoa": 0.0,
+      "Algae": 0.0,
+      "Bacteria": 100.0,
+      "Fungi": 0.0,
+      "Cyanobacteria": 0.0,
+      "Plant_Debris": 0.0,
+      "Micro_Worm": 0.0
+    },
+    "annotated_image": "outputs/annotated_d98526a1.jpg",
+    "pie_chart": "outputs\\pie_6402175e.png",
+    "bar_chart": "outputs\\bar_b74ab6b5.png",
+    "pdf": "outputs\\report_4b5b92c0.pdf"
+  }
+]

@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+env/
+venv/
+.venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Jupyter
+.ipynb_checkpoints
+
+# VS Code
+.vscode/
+
+# Node
+node_modules/
+
+# Logs
+*.log
+
+# OS files
+Thumbs.db
+desktop.ini
+
+# Env
+.env
+.env.*
+
+# Python virtual envs and caches
+pip-wheel-metadata/
+dist/
+build/
+
+# Mac
+.DS_Store
+
+# Large model / output folders you may want to keep out of git
+backend/outputs/
+backend/models/

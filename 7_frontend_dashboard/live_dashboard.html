@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Live Dashboard - AquaSafe AI</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* Small page-specific styles to keep the look clean */
+    .dashboard-container { max-width: 1100px; margin: 32px auto; padding: 0 16px; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit,minmax(160px,1fr)); gap: 16px; margin-bottom: 24px; }
+    .card { background: #fff; border-radius: 8px; padding: 16px; box-shadow: 0 6px 18px rgba(20,20,40,0.04); }
+    .card h4 { margin: 0 0 8px 0; font-size: 13px; color:#666; }
+    .card .value { font-size: 22px; font-weight:700; color:#1f6feb; }
+    .controls { display:flex; gap:12px; align-items:center; margin-bottom:16px; }
+    .chart-wrap { background:#fff; padding:16px; border-radius:8px; box-shadow:0 6px 18px rgba(20,20,40,0.04); }
+    header.local-nav { background: #f6f0fb; padding: 12px 24px; border-bottom:1px solid #eee; }
+    header.local-nav .nav-links { display:flex; gap:12px; align-items:center; }
+    .btn { padding:8px 12px; background:#1976d2; color:white; border-radius:6px; text-decoration:none; display:inline-block }
+    .btn.secondary { background:#e0e0e0; color:#222 }
+  </style>
+</head>
+<body>
+  <header class="local-nav">
+    <div style="max-width:1100px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;">
+      <div><a href="index.html" style="text-decoration:none;color:#1976d2;font-weight:700">AquaSafe AI</a></div>
+      <nav class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="upload.html">Upload</a>
+        <a href="analytics.html">Analytics</a>
+        <a href="history.html">History</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="dashboard-container">
+    <h2>Live Dashboard</h2>
+    <p style="color:#555;margin-top:4px;margin-bottom:20px">Real-time sensor values (dummy data). Click <strong>Refresh Data</strong> to fetch latest values.</p>
+
+    <div class="controls">
+      <button id="refreshBtn" class="btn">Refresh Data</button>
+      <button id="autoRefreshBtn" class="btn secondary">Start Auto-Refresh</button>
+      <div style="margin-left:auto;color:#666">Showing last 24 hours (Turbidity)</div>
+    </div>
+
+    <div class="cards">
+      <div class="card"><h4>Turbidity (NTU)</h4><div id="turbidityValue" class="value">--</div></div>
+      <div class="card"><h4>pH</h4><div id="phValue" class="value">--</div></div>
+      <div class="card"><h4>Temperature (°C)</h4><div id="tempValue" class="value">--</div></div>
+      <div class="card"><h4>Dissolved Oxygen (mg/L)</h4><div id="doValue" class="value">--</div></div>
+      <div class="card"><h4>TDS (ppm)</h4><div id="tdsValue" class="value">--</div></div>
+      <div class="card"><h4>Conductivity (µS/cm)</h4><div id="condValue" class="value">--</div></div>
+    </div>
+
+    <div class="chart-wrap">
+      <canvas id="turbidityChart" height="120"></canvas>
+    </div>
+
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="js/live_dashboard.js"></script>
+</body>
+</html>

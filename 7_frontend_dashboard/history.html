@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>History</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- NAVBAR -->
+    <header class="navbar">
+        <div class="nav-left">
+<img src="assets1/logo.jpeg" alt="logo" width="100" height="100">
+            <span class="logo-text">AquaSafe AI</span>
+        </div>
+
+        <nav class="nav-links">
+            <a href="index.html">Home</a>
+            <a href="upload.html">Upload</a>
+            <a href="history.html" class="active">History</a>
+            <a href="analytics.html">Analytics</a>
+            <a href="about.html">About</a>
+        </nav>
+    </header>
+
+    <!-- PAGE CONTENT -->
+    <section class="content">
+        <h2>History</h2>
+        <p>View past analyses and detections.</p>
+
+        <div style="margin-bottom: 20px;">
+            <label for="historyLimit" style="font-weight: bold;">Show last </label>
+            <select id="historyLimit" style="padding: 8px 12px; border-radius: 4px; border: 1px solid #ddd;">
+                <option value="10">10 detections</option>
+                <option value="25">25 detections</option>
+                <option value="50" selected>50 detections</option>
+                <option value="100">100 detections</option>
+            </select>
+            <button id="refreshBtn" style="padding: 8px 16px; margin-left: 10px; background: #1F6FEB; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">Refresh</button>
+            <span id="loadingIndicator" style="display: none; margin-left: 10px; color: #666;">Loading...</span>
+        </div>
+
+        <div class="history-list" id="historyList">
+            <p style="color: #999; text-align: center; padding: 40px;">Loading history...</p>
+        </div>
+    </section>
+
+    <script src="js/api-client.js"></script>
+    <script src="js/history.js"></script>
+
+</body>
+</html>

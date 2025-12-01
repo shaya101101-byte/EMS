@@ -1,0 +1,17 @@
+/* assets/styles.css - simple modern styling */
+body { background: #f6f9fc; color: #0f172a; }
+section.main { padding-top: 10px; }
+.card {
+  background: white;
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.06);
+  margin-bottom: 12px;
+}
+.header {
+  display:flex; align-items:center; gap:12px;
+}
+.metric {
+  padding: 8px; border-radius:6px; background: #f8fafc; display:inline-block;
+}
+.small { font-size: 0.85rem; color:#6b7280; }
