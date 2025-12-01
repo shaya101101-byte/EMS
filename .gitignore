@@ -37,7 +37,3 @@ build/
 
 # Mac
 .DS_Store
-
-# Large model / output folders you may want to keep out of git
-backend/outputs/
-backend/models/
