@@ -14,6 +14,7 @@ import io
 import base64
 import datetime
 import math
+import uuid
 
 # Image processing
 from PIL import Image, ImageDraw, ImageFont
@@ -30,7 +31,7 @@ from reportlab.lib.utils import ImageReader
 
 # Model related imports are done lazily so the module can be imported
 MODEL = None
-MODEL_CONF = 0.35
+MODEL_CONF = 0.10
 MODEL_IOU = 0.45
 MODEL_MAX_DET = 300
 
@@ -307,9 +308,16 @@ def analyze_image_bytes(image_bytes: bytes, conf_thresh: Optional[float] = None,
     elif len(caution_classes) > 0:
         overall = {'verdict': 'Caution', 'reason': 'One or more cautionary classes detected.'}
 
-    # Annotated image
+    # Annotated image - save to disk and return URL instead of base64
     annotated_bytes = _annotate_image_pil(pil_img.copy(), boxes)
-    annotated_b64 = _image_bytes_to_base64(annotated_bytes)
+    # Create static/results directory if it doesn't exist
+    os.makedirs('static/results', exist_ok=True)
+    annotated_filename = f"annotated_{uuid.uuid4().hex[:8]}.png"
+    annotated_path = os.path.join('static/results', annotated_filename)
+    with open(annotated_path, 'wb') as f:
+        f.write(annotated_bytes)
+    # Return absolute URL to backend (frontend will use this from different port)
+    annotated_image_url = f"http://127.0.0.1:8000/static/results/{annotated_filename}"
 
     # Charts
     pie_bytes = _make_pie_chart(counts)
@@ -328,7 +336,8 @@ def analyze_image_bytes(image_bytes: bytes, conf_thresh: Optional[float] = None,
         'total_detections': total,
         'per_class': per_class,
         'overall_verdict': overall,
-        'annotated_image_base64': annotated_b64,
+        'annotated_image_url': annotated_image_url,
+        'annotated_image_base64': '',  # Empty for compatibility; URL is used instead
         'pie_chart_base64': pie_b64,
         'bar_chart_base64': bar_b64,
         'pdf_base64': pdf_b64,

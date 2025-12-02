@@ -18,21 +18,41 @@ const ApiClient = {
             const formData = new FormData();
             formData.append('image', file);
 
+            // Use AbortController for timeout (YOLO inference can take 15-30 seconds)
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 120000); // 120 second timeout
+
             const response = await fetch(`${BASE_URL}/predict`, {
                 method: 'POST',
                 body: formData,
+                signal: controller.signal,
                 // NOTE: Do NOT set Content-Type header when using FormData
                 // Browser will set it automatically with boundary
             });
 
+            clearTimeout(timeoutId);
+
             if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                if (errorData.error) {
+                    throw new Error(errorData.error);
+                }
                 throw new Error(`Server error: ${response.status} - ${response.statusText}`);
             }
 
             const data = await response.json();
+            
+            // Check if response contains error field (validation failure)
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
             return data;
         } catch (error) {
             console.error('Upload error:', error);
+            if (error.name === 'AbortError') {
+                throw new Error('Request timeout. The image took too long to process. Try a simpler image.');
+            }
             throw error;
         }
     },

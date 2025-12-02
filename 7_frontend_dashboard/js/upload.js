@@ -5,6 +5,7 @@
  */
 
 (function() {
+    console.log('[upload.js] loaded');
     // Get DOM elements
     const fileInput = document.getElementById('fileInput');
     const fileName = document.getElementById('fileName');
@@ -19,18 +20,34 @@
     // Handle file selection
     fileInput.addEventListener('change', function(e) {
         const file = e.target.files[0];
+        // Always update fileName display even if file type is not supported
         if (file) {
             selectedFile = file;
-            fileName.textContent = file.name;
-            
-            // Show preview
+            fileName.textContent = file.name || 'Selected file';
+
+            // Show preview (if browser can render the image type)
             const reader = new FileReader();
             reader.onload = function(event) {
                 previewImg.src = event.target.result;
                 preview.classList.add('show');
+                // Show analyze button so user can proceed or see validation message
                 analyzeBtn.style.display = 'block';
             };
             reader.readAsDataURL(file);
+
+            // If the file is WebP, show a gentle notice (backend may prefer JPG/PNG)
+            if (file.type === 'image/webp' || file.name.toLowerCase().endsWith('.webp')) {
+                results.innerHTML = `
+                    <div style="padding: 12px; background: #FFF7E6; border-radius: 6px; color: #995200; border-left: 4px solid #FFB74D; margin-top:8px;">
+                        Note: WebP images may not be supported by the backend. For best results, convert to JPG/PNG before analyzing.
+                    </div>
+                `;
+                results.classList.add('show');
+            } else {
+                // clear any prior notices
+                results.innerHTML = '';
+                results.classList.remove('show');
+            }
         }
     });
 
@@ -89,8 +106,40 @@
             // Use centralized API client to upload image
             const analysisData = await ApiClient.uploadImage(selectedFile);
 
-            // Save response to localStorage with the key "currentAnalysis"
-            localStorage.setItem('currentAnalysis', JSON.stringify(analysisData));
+            // Check for error in response
+            if (analysisData.error) {
+                hideLoadingModal();
+                results.innerHTML = `
+                    <div style="padding: 20px; background: #FEE; border-radius: 8px; color: #C33; border-left: 4px solid #C33;">
+                        <strong>Error:</strong> ${analysisData.error}
+                    </div>
+                `;
+                results.classList.add('show');
+                return;
+            }
+
+            // Transform /predict response format to analytics.js format
+            const transformedData = transformPredictResponse(analysisData);
+
+            // --- SAFE STORAGE (prevents quota exceeded error) ---
+            try {
+                // Remove large base64 images from response before saving
+                // Keep URLs (they're small strings) but exclude base64 (they're huge)
+                const { annotated_image_base64, pie_chart_base64, bar_chart_base64, pdf_base64, ...safeData } = transformedData;
+
+                // Save only text/small data to localStorage
+                localStorage.setItem('currentAnalysis', JSON.stringify(safeData));
+            } catch (storageError) {
+                // If storage still fails, try removing even more data
+                console.warn("Storage quota exceeded. Trying minimal data save.", storageError);
+                try {
+                    const { annotated_image_base64, pie_chart_base64, bar_chart_base64, pdf_base64, detections, per_class, ...minimalData } = transformedData;
+                    localStorage.setItem('currentAnalysis', JSON.stringify(minimalData));
+                } catch (finalError) {
+                    console.error("Cannot save analysis data to localStorage.", finalError);
+                    alert("Warning: Analysis data could not be saved. Results will show but won't persist on refresh.");
+                }
+            }
 
             // Hide loading modal
             hideLoadingModal();
@@ -111,6 +160,75 @@
             `;
             results.classList.add('show');
         }
+    });
+
+    /**
+     * Transform /predict response format to analytics.js expected format
+     * /predict returns: { total_count, species, detections, counts, annotated_image_url, ... }
+     * analytics.js expects: { total_detections, per_class, overall_verdict, annotated_image_url, ... }
+     */
+    function transformPredictResponse(predictResponse) {
+        // Extract counts from either species array or counts object
+        let counts = {};
+        
+        if (predictResponse.species && Array.isArray(predictResponse.species)) {
+            // Convert species array to counts
+            predictResponse.species.forEach(sp => {
+                counts[sp.name] = sp.count;
+            });
+        } else if (predictResponse.counts) {
+            counts = predictResponse.counts;
+        }
+
+        // Build per_class array for detailed breakdown
+        const perClass = Object.entries(counts).map(([name, count]) => ({
+            class_name: name,
+            count: count,
+            percentage: predictResponse.total_count > 0 
+                ? ((count / predictResponse.total_count) * 100).toFixed(1)
+                : 0
+        }));
+
+        // Determine safety verdict based on detections
+        let verdict = 'Safe';
+        let reason = 'No harmful organisms detected.';
+        
+        // Simple safety logic - customize based on your data
+        const unsafeClasses = ['rotifer']; // Example: rotifers might be unsafe
+        const cautionClasses = ['algae']; // Example: algae might be caution
+        
+        for (let className in counts) {
+            if (unsafeClasses.includes(className.toLowerCase())) {
+                verdict = 'Unsafe';
+                reason = `High-risk organism(s) detected: ${className}. Immediate action recommended.`;
+                break;
+            } else if (cautionClasses.includes(className.toLowerCase())) {
+                if (verdict !== 'Unsafe') {
+                    verdict = 'Caution';
+                    reason = `Presence of ${className} detected. Review recommended.`;
+                }
+            }
+        }
+
+        // Return transformed object
+        return {
+            total_detections: predictResponse.total_count || 0,
+            per_class: perClass,
+            overall_verdict: {
+                verdict: verdict,
+                reason: reason
+            },
+            annotated_image_url: predictResponse.annotated_image_url || '',
+            timestamp: predictResponse.timestamp || new Date().toISOString(),
+            analysis_id: predictResponse.analysis_id || predictResponse.id || 0,
+            // Keep original fields for compatibility
+            total_count: predictResponse.total_count || 0,
+            species: predictResponse.species || [],
+            counts: counts,
+            detections: predictResponse.detections || [],
+            uploaded_image_url: predictResponse.uploaded_image_url || ''
+        };
+    }
     });
 
     /**

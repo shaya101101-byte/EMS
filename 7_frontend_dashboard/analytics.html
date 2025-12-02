@@ -8,6 +8,50 @@
 </head>
 <body>
 
+    <script>
+    // Ensure analytics page uses only the latest analysisResults stored by upload page
+    (function(){
+        const results = JSON.parse(localStorage.getItem('analysisResults'));
+        if (!results){
+            document.body.innerHTML = '<h2 style="padding:40px; text-align:center;">No analysis found. Please upload an image first.</h2>';
+            return;
+        }
+
+        // transform predict response into the legacy `currentAnalysis` shape used by analytics.js
+        try{
+            const predictResponse = results;
+            let counts = {};
+            if (predictResponse.species && Array.isArray(predictResponse.species)){
+                predictResponse.species.forEach(sp=>{ counts[sp.name]=sp.count; });
+            } else if (predictResponse.counts){ counts = predictResponse.counts; }
+
+            const perClass = Object.entries(counts).map(([name,count])=>({class_name:name,count:count,percentage: predictResponse.total_count>0?((count/predictResponse.total_count)*100).toFixed(1):0}));
+            let verdict='Safe', reason='No harmful organisms detected.';
+            const unsafeClasses=['rotifer']; const cautionClasses=['algae'];
+            for (let cname in counts){ if (unsafeClasses.includes(cname.toLowerCase())){ verdict='Unsafe'; reason=`High-risk organism(s) detected: ${cname}. Immediate action recommended.`; break;} else if (cautionClasses.includes(cname.toLowerCase())){ if (verdict!=='Unsafe'){ verdict='Caution'; reason=`Presence of ${cname} detected. Review recommended.`; } } }
+
+            const transformed = {
+                total_detections: predictResponse.total_count||0,
+                per_class: perClass,
+                overall_verdict: {verdict:verdict, reason:reason},
+                annotated_image_url: predictResponse.annotated_image_url||'',
+                annotated_image_base64: predictResponse.annotated_image_base64||'',
+                pie_chart_base64: predictResponse.pie_chart_base64||'',
+                bar_chart_base64: predictResponse.bar_chart_base64||'',
+                timestamp: predictResponse.timestamp||new Date().toISOString(),
+                summary: predictResponse.summary||'',
+                detections: predictResponse.detections||[],
+                counts: counts,
+                total_count: predictResponse.total_count||0
+            };
+
+            // store transformed object for the existing analytics.js to consume
+            localStorage.setItem('currentAnalysis', JSON.stringify(transformed));
+        }catch(e){
+            console.error('Failed to transform analysisResults for analytics page', e);
+        }
+    })();
+    </script>
     <!-- NAVBAR -->
     <header class="navbar">
         <div class="nav-left">

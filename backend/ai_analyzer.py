@@ -131,7 +131,8 @@ class AquaSafeAI:
             return self._mock_inference(image_array)
         
         try:
-            results = self.model(image_array, conf=0.5, iou=0.45)
+            # Use lower confidence threshold (0.10) to detect more organisms
+            results = self.model(image_array, conf=0.10, iou=0.45)
             detections = {
                 "boxes": [],
                 "raw_results": results
@@ -167,12 +168,18 @@ class AquaSafeAI:
         
         annotated = image_array.copy()
         
+        # Get class names from YOLO model if available
+        class_names = {}
+        if self.model is not None and hasattr(self.model, 'names'):
+            class_names = self.model.names if isinstance(self.model.names, dict) else {i: n for i, n in enumerate(self.model.names)}
+        
         for box_data in detections.get("boxes", []):
             x1, y1, x2, y2, cls_id, conf = box_data
             x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
             cls_id = int(cls_id)
             
-            class_name = CLASS_MAP.get(cls_id, f"Unknown_{cls_id}")
+            # Use class name from model, fallback to CLASS_MAP, then generic label
+            class_name = class_names.get(cls_id, CLASS_MAP.get(cls_id, f"Unknown_{cls_id}"))
             label = f"{class_name} ({conf:.2f})"
             
             # Draw bounding box
@@ -201,12 +208,25 @@ class AquaSafeAI:
         Returns:
             (counts_dict, percentages_dict, safety_status)
         """
-        counts = {CLASS_MAP.get(i, f"Unknown_{i}"): 0 for i in range(len(CLASS_MAP))}
+        # Get class names from YOLO model if available
+        class_names = {}
+        if self.model is not None and hasattr(self.model, 'names'):
+            class_names = self.model.names if isinstance(self.model.names, dict) else {i: n for i, n in enumerate(self.model.names)}
         
+        # Initialize counts with all possible class names (from model or CLASS_MAP)
+        counts = {}
+        for cls_id in range(max(7, len(class_names))):  # At least 7 classes from CLASS_MAP
+            cls_name = class_names.get(cls_id, CLASS_MAP.get(cls_id, f"Unknown_{cls_id}"))
+            counts[cls_name] = 0
+        
+        # Count detections
         for box_data in detections.get("boxes", []):
             cls_id = int(box_data[4])
-            class_name = CLASS_MAP.get(cls_id, f"Unknown_{cls_id}")
+            class_name = class_names.get(cls_id, CLASS_MAP.get(cls_id, f"Unknown_{cls_id}"))
             counts[class_name] = counts.get(class_name, 0) + 1
+        
+        # Remove zero counts for cleaner output
+        counts = {k: v for k, v in counts.items() if v > 0}
         
         total = sum(counts.values())
         percentages = {k: (v / total * 100) if total > 0 else 0 for k, v in counts.items()}

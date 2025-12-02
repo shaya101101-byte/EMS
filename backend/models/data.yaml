@@ -1,0 +1,8 @@
+# YOLO Dataset Configuration
+# Class names mapping for your microorganism detection model
+
+names:
+  0: diatom
+  1: rotifer
+  2: copepod
+  3: algae

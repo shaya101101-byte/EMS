@@ -26,26 +26,91 @@
 
     <!-- MAIN CONTENT -->
     <section class="upload-section">
-        <h2>Upload Microscopic Image</h2>
-        <p>Upload your water sample image to analyze organisms and water quality.</p>
+        <div class="upload-box">
+            <h2>Upload Microscopic Image</h2>
+            <p>Upload your water sample image to analyze organisms and water quality.</p>
 
-        <div class="upload-area" id="uploadArea">
-            <input type="file" id="fileInput" accept="image/*">
-            <label for="fileInput" class="btn primary">Choose Image</label>
-            <p id="fileName">No file selected</p>
+            <input type="file" id="imageInput" accept="image/*">
+            <br><br>
+
+            <img id="previewImage" style="max-width: 400px; display:none; border-radius: 10px;">
+            <br><br>
+
+            <button id="analyzeBtn" style="display:none;" class="btn primary">Analyze</button>
         </div>
-
-        <div id="preview" class="preview">
-            <img id="previewImg" src="" alt="Preview">
-        </div>
-
-        <button id="analyzeBtn" class="btn primary" style="display:none;">Analyze Image</button>
-
-        <div id="results" class="results"></div>
     </section>
 
-    <script src="js/api-client.js"></script>
-    <script src="js/upload.js"></script>
+    <script>
+    const input = document.getElementById("imageInput");
+    const preview = document.getElementById("previewImage");
+    const analyzeBtn = document.getElementById("analyzeBtn");
+
+    input.addEventListener("change", () => {
+        const file = input.files[0];
+        if (!file) return;
+        preview.src = URL.createObjectURL(file);
+        preview.style.display = "block";
+        analyzeBtn.style.display = "inline-block";
+    });
+
+    analyzeBtn.addEventListener("click", async () => {
+        const file = input.files[0];
+        if (!file) return alert("Please select an image!");
+
+        const formData = new FormData();
+        // send under both keys to support backends expecting either name
+        formData.append("file", file);
+        formData.append("image", file);
+
+        try {
+            const res = await fetch("http://127.0.0.1:8000/predict", {
+                method: "POST",
+                body: formData
+            });
+
+            const data = await res.json();
+            // store under the requested key
+            localStorage.setItem("analysisResults", JSON.stringify(data));
+
+            // also store a transformed copy for legacy analytics code compatibility
+            try {
+                const transformed = (function(predictResponse){
+                    let counts = {};
+                    if (predictResponse.species && Array.isArray(predictResponse.species)){
+                        predictResponse.species.forEach(sp => { counts[sp.name] = sp.count; });
+                    } else if (predictResponse.counts){
+                        counts = predictResponse.counts;
+                    }
+                    const perClass = Object.entries(counts).map(([name,count])=>({class_name:name,count:count,percentage: predictResponse.total_count>0?((count/predictResponse.total_count)*100).toFixed(1):0}));
+                    let verdict = 'Safe', reason = 'No harmful organisms detected.';
+                    const unsafeClasses = ['rotifer']; const cautionClasses = ['algae'];
+                    for (let cname in counts){ if (unsafeClasses.includes(cname.toLowerCase())){ verdict='Unsafe'; reason=`High-risk organism(s) detected: ${cname}. Immediate action recommended.`; break;} else if (cautionClasses.includes(cname.toLowerCase())){ if (verdict!=='Unsafe'){ verdict='Caution'; reason=`Presence of ${cname} detected. Review recommended.`; } } }
+                    return {
+                        total_detections: predictResponse.total_count||0,
+                        per_class: perClass,
+                        overall_verdict:{verdict:verdict,reason:reason},
+                        annotated_image_url: predictResponse.annotated_image_url||'',
+                        timestamp: predictResponse.timestamp||new Date().toISOString(),
+                        analysis_id: predictResponse.analysis_id||predictResponse.id||0,
+                        total_count: predictResponse.total_count||0,
+                        species: predictResponse.species||[],
+                        counts: counts,
+                        detections: predictResponse.detections||[],
+                        uploaded_image_url: predictResponse.uploaded_image_url||''
+                    };
+                })(data);
+                localStorage.setItem('currentAnalysis', JSON.stringify(transformed));
+            } catch(e){
+                // ignore transform errors
+                console.warn('Transform failed', e);
+            }
+
+            window.location.href = 'analytics.html';
+        } catch (err){
+            alert('Upload failed: '+err.message);
+        }
+    });
+    </script>
 
 </body>
 </html>

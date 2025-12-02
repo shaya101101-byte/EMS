@@ -33,8 +33,8 @@ def run_inference_on_bytes(image_bytes):
             img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
             if img is None:
                 raise ValueError("Failed to decode image")
-            # run YOLO inference using ultralytics API
-            results = MODEL.model.predict(source=img, imgsz=640, conf=0.35)
+            # run YOLO inference using ultralytics API with lower confidence threshold
+            results = MODEL.model.predict(source=img, imgsz=640, conf=0.10)
             # ultralytics returns a list; take first
             res = results[0]
             boxes = []

@@ -15,6 +15,9 @@
 
     /**
      * A. Display Current Analysis from localStorage
+     * NOTE: Large base64 images (annotated_image_base64, pie_chart_base64, bar_chart_base64)
+     * are excluded from localStorage to prevent quota exceeded errors.
+     * They are handled gracefully with fallback placeholders below.
      */
     function displayCurrentAnalysis() {
         const analysisJson = localStorage.getItem('currentAnalysis');
@@ -37,6 +40,8 @@
             const totalDetections = analysis.total_detections || 0;
             const perClass = analysis.per_class || [];
             const overallVerdict = analysis.overall_verdict || { verdict: 'Unknown', reason: '' };
+            // Use URL-based annotated image (preferred) or fallback to base64
+            const annotatedImageUrl = analysis.annotated_image_url || '';
             const annotatedImageB64 = analysis.annotated_image_base64 || '';
             const pieChartB64 = analysis.pie_chart_base64 || '';
             const barChartB64 = analysis.bar_chart_base64 || '';
@@ -87,10 +92,10 @@
                     </div>
 
                     <!-- Annotated Image with Bounding Boxes -->
-                    ${annotatedImageB64 ? `
+                    ${annotatedImageUrl || annotatedImageB64 ? `
                         <div style="margin-bottom: 30px;">
                             <h3 style="color: #2C3E50; margin-top: 0;">Detected Organisms (with Bounding Boxes)</h3>
-                            <img src="data:image/png;base64,${annotatedImageB64}" alt="Annotated Detection" style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border: 2px solid #1F6FEB;">
+                            <img src="${annotatedImageUrl ? annotatedImageUrl : 'data:image/png;base64,' + annotatedImageB64}" alt="Annotated Detection" style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border: 2px solid #1F6FEB;">
                         </div>
                     ` : ''}
 
