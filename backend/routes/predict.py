@@ -35,9 +35,10 @@ async def predict(image: UploadFile = File(...)):
         # run inference on the bytes we read
         result = run_inference_on_bytes(contents)
 
-        # save annotated image to disk
+        # save annotated image to disk in static/results
+        os.makedirs("static/results", exist_ok=True)
         filename = f"{datetime.utcnow().strftime('%Y%m%d%H%M%S')}_{uuid.uuid4().hex[:8]}.jpg"
-        outpath = os.path.join(RESULTS_DIR, filename)
+        outpath = os.path.join("static/results", filename)
         with open(outpath, "wb") as f:
             f.write(result["annotated_bytes"])
 
@@ -58,24 +59,32 @@ async def predict(image: UploadFile = File(...)):
             print("DB insert failed:", db_e)
             inserted_id = None
 
-        # produce base64 for frontend
-        annotated_b64 = to_base64(result["annotated_bytes"])
+        # Build detections list from boxes
+        detections = []
+        if "boxes" in result:
+            for box in result["boxes"]:
+                detections.append({
+                    "class": box["class"],
+                    "confidence": box["score"],
+                    "x1": box["x1"],
+                    "y1": box["y1"],
+                    "x2": box["x2"],
+                    "y2": box["y2"]
+                })
 
-        # add URL so frontend can display the original uploaded image
-        image_url = f"/uploaded_images/{timestamp_filename}"
-
+        # Return exact JSON structure required by frontend
         return JSONResponse({
-            "id": inserted_id,
-            "timestamp": datetime.utcnow().isoformat(),
-            "annotated_image": annotated_b64,
-            "uploaded_image_url": image_url,
-            "original_filename": image.filename,
+            "analysis_id": inserted_id or 0,
+            "total_count": result["total"],
+            "species": result.get("species", []),
+            "summary": result.get("summary", "Analysis complete."),
+            "annotated_image_url": f"/static/results/{filename}",
+            # Additional fields for backward compatibility
+            "detections": detections,
             "counts": result["counts"],
-            "total": result["total"],
-            "dominant": result["dominant"],
-            "quality": result["quality"],
-            "confidence": result["confidence"],
-            "image_path": outpath
+            "timestamp": datetime.utcnow().isoformat(),
+            "uploaded_image_url": f"/uploaded_images/{timestamp_filename}",
+            "id": inserted_id
         })
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

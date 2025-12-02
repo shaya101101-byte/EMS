@@ -6,6 +6,7 @@ class ModelWrapper:
     def __init__(self):
         self.model = None
         self.type = "mock"
+        self.class_names = {}  # Store YOLO class names
 
     def load(self):
         # Try to load a YOLO model (ultralytics) if available
@@ -15,6 +16,19 @@ class ModelWrapper:
                 from ultralytics import YOLO
                 self.model = YOLO(MODEL_PATH)
                 self.type = "yolov8"
+                # Store class names from the model
+                if hasattr(self.model, 'names'):
+                    names = self.model.names
+                    # Ensure class_names is a dict mapping index -> name
+                    if isinstance(names, dict):
+                        self.class_names = names
+                    else:
+                        try:
+                            # names may be a list-like
+                            self.class_names = {i: n for i, n in enumerate(names)}
+                        except Exception:
+                            self.class_names = {}
+                    print("YOLO class names:", self.class_names)
                 print("Loaded YOLOv8 model:", MODEL_PATH)
                 return
         except Exception as e:

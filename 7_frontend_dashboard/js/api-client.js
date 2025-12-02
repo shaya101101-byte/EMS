@@ -4,21 +4,21 @@
  * All requests go through this module for consistency
  */
 
-const BASE_URL = 'http://localhost:8000';
+const BASE_URL = 'http://127.0.0.1:8000';
 
 const ApiClient = {
     /**
-     * Upload image and run inference
-     * POST /predict
-     * @param {File} file - Image file
-     * @returns {Promise} - Analysis result with annotated image, counts, etc.
+     * Upload image and run full analysis
+     * POST /analyze-image
+     * @param {File} file - Image file (JPG/PNG)
+     * @returns {Promise} - Analysis result with organisms, charts, safety verdict, PDF
      */
     uploadImage: async function(file) {
         try {
             const formData = new FormData();
-            formData.append('image', file);
+            formData.append('file', file);  // Note: /analyze-image expects field named 'file'
 
-            const response = await fetch(`${BASE_URL}/predict`, {
+            const response = await fetch(`${BASE_URL}/analyze-image`, {
                 method: 'POST',
                 body: formData,
                 // NOTE: Do NOT set Content-Type header when using FormData

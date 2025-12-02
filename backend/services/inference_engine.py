@@ -26,8 +26,15 @@ def run_inference_on_bytes(image_bytes):
     # If model type is yolov8, use it; else use mock
     try:
         if MODEL.type == "yolov8" and MODEL.model is not None:
+            # Decode bytes to numpy array for YOLO
+            import cv2
+            import numpy as np
+            nparr = np.frombuffer(image_bytes, np.uint8)
+            img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            if img is None:
+                raise ValueError("Failed to decode image")
             # run YOLO inference using ultralytics API
-            results = MODEL.model.predict(source=image_bytes, imgsz=640, conf=0.35)
+            results = MODEL.model.predict(source=img, imgsz=640, conf=0.35)
             # ultralytics returns a list; take first
             res = results[0]
             boxes = []
@@ -35,7 +42,8 @@ def run_inference_on_bytes(image_bytes):
                 x1,y1,x2,y2 = map(int, det.xyxy[0].tolist())
                 score = float(det.conf[0])
                 cls_idx = int(det.cls[0])
-                cls_name = MODEL.model.names[cls_idx] if hasattr(MODEL.model, "names") else str(cls_idx)
+                # Use class names from MODEL.class_names (stored during model load)
+                cls_name = MODEL.class_names.get(cls_idx, f"class{cls_idx}") if MODEL.class_names else f"class{cls_idx}"
                 boxes.append({"x1":x1,"y1":y1,"x2":x2,"y2":y2,"score":score,"class":cls_name})
         else:
             # mock path — derive image size and produce random boxes
@@ -45,6 +53,23 @@ def run_inference_on_bytes(image_bytes):
             boxes = _mock_boxes(w,h)
 
         counts, total, dominant = summarize_counts(boxes)
+        
+        # Calculate percentages for species
+        species_list = []
+        for class_name, count in counts.items():
+            percentage = round((count / total * 100), 1) if total > 0 else 0
+            species_list.append({
+                "name": class_name,
+                "count": count,
+                "percentage": percentage
+            })
+        
+        # Sort by count (descending)
+        species_list = sorted(species_list, key=lambda x: x["count"], reverse=True)
+        
+        # Create summary text
+        summary = f"Detected {total} organisms across {len(species_list)} species."
+        
         annotated = annotate_image_bytes(image_bytes, boxes)
         avg_conf = sum([b["score"] for b in boxes]) / (len(boxes) or 1)
         quality = "Good" if total < 10 else ("Moderate" if total < 25 else "Poor")
@@ -56,7 +81,9 @@ def run_inference_on_bytes(image_bytes):
             "dominant": dominant,
             "quality": quality,
             "confidence": round(avg_conf, 3),
-            "annotated_bytes": annotated
+            "annotated_bytes": annotated,
+            "species": species_list,
+            "summary": summary
         }
     except Exception as e:
         # in case inference fails, return a mock result
@@ -70,6 +97,23 @@ def run_inference_on_bytes_mock(image_bytes):
     w,h = im.size
     boxes = _mock_boxes(w,h)
     counts, total, dominant = summarize_counts(boxes)
+    
+    # Calculate percentages for species
+    species_list = []
+    for class_name, count in counts.items():
+        percentage = round((count / total * 100), 1) if total > 0 else 0
+        species_list.append({
+            "name": class_name,
+            "count": count,
+            "percentage": percentage
+        })
+    
+    # Sort by count (descending)
+    species_list = sorted(species_list, key=lambda x: x["count"], reverse=True)
+    
+    # Create summary text
+    summary = f"Detected {total} organisms across {len(species_list)} species."
+    
     annotated = annotate_image_bytes(image_bytes, boxes)
     avg_conf = sum([b["score"] for b in boxes]) / (len(boxes) or 1)
     quality = "Good" if total < 10 else ("Moderate" if total < 25 else "Poor")
@@ -80,5 +124,7 @@ def run_inference_on_bytes_mock(image_bytes):
         "dominant": dominant,
         "quality": quality,
         "confidence": round(avg_conf, 3),
-        "annotated_bytes": annotated
+        "annotated_bytes": annotated,
+        "species": species_list,
+        "summary": summary
     }

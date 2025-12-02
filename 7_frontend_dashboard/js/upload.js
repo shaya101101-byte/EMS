@@ -58,6 +58,30 @@
             return;
         }
 
+        // Validate file size (max 10MB)
+        const maxSize = 10 * 1024 * 1024; // 10MB
+        if (selectedFile.size > maxSize) {
+            results.innerHTML = `
+                <div style="padding: 20px; background: #FEE; border-radius: 8px; color: #C33; border-left: 4px solid #C33;">
+                    <strong>Error:</strong> File size must be less than 10MB. Your file is ${(selectedFile.size / 1024 / 1024).toFixed(2)}MB.
+                </div>
+            `;
+            results.classList.add('show');
+            return;
+        }
+
+        // Validate file type
+        const validTypes = ['image/jpeg', 'image/png', 'image/jpg'];
+        if (!validTypes.includes(selectedFile.type)) {
+            results.innerHTML = `
+                <div style="padding: 20px; background: #FEE; border-radius: 8px; color: #C33; border-left: 4px solid #C33;">
+                    <strong>Error:</strong> Please upload a JPG or PNG image. You uploaded a ${selectedFile.type} file.
+                </div>
+            `;
+            results.classList.add('show');
+            return;
+        }
+
         // Show loading modal
         showLoadingModal();
 
@@ -65,8 +89,8 @@
             // Use centralized API client to upload image
             const analysisData = await ApiClient.uploadImage(selectedFile);
 
-            // Save response to localStorage
-            localStorage.setItem('current_analysis', JSON.stringify(analysisData));
+            // Save response to localStorage with the key "currentAnalysis"
+            localStorage.setItem('currentAnalysis', JSON.stringify(analysisData));
 
             // Hide loading modal
             hideLoadingModal();

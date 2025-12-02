@@ -17,7 +17,7 @@
      * A. Display Current Analysis from localStorage
      */
     function displayCurrentAnalysis() {
-        const analysisJson = localStorage.getItem('current_analysis');
+        const analysisJson = localStorage.getItem('currentAnalysis');
         
         if (!analysisJson) {
             showNoCurrentAnalysis();
@@ -33,37 +33,87 @@
                 return;
             }
 
-            // Build current analysis section
+            // Extract data from /analyze-image response
+            const totalDetections = analysis.total_detections || 0;
+            const perClass = analysis.per_class || [];
+            const overallVerdict = analysis.overall_verdict || { verdict: 'Unknown', reason: '' };
+            const annotatedImageB64 = analysis.annotated_image_base64 || '';
+            const pieChartB64 = analysis.pie_chart_base64 || '';
+            const barChartB64 = analysis.bar_chart_base64 || '';
+
+            // Safety verdict color
+            const verdictColor = overallVerdict.verdict === 'Unsafe' ? '#FF6B6B' : 
+                                 overallVerdict.verdict === 'Caution' ? '#FFA500' : '#27AE60';
+            const verdictBgColor = overallVerdict.verdict === 'Unsafe' ? '#FFE5E5' : 
+                                   overallVerdict.verdict === 'Caution' ? '#FFF3E0' : '#E8F8F5';
+
             const html = `
                 <div style="margin-bottom: 40px;">
-                    <h2 style="color: #2C3E50; margin-top: 0;">Current Analysis</h2>
+                    <h2 style="color: #2C3E50; margin-top: 0;">Water Quality Analysis Results</h2>
                     
-                    <!-- Summary -->
-                    <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                        <h3 style="margin-top: 0; color: #2C3E50;">Summary</h3>
-                        <p style="margin: 0; color: #666; font-size: 16px;">${analysis.summary || 'No summary available'}</p>
+                    <!-- Overall Safety Verdict (Prominent) -->
+                    <div style="padding: 24px; background: ${verdictBgColor}; border-radius: 12px; border-left: 6px solid ${verdictColor}; margin-bottom: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                            <div>
+                                <p style="margin: 0 0 8px 0; font-size: 12px; color: #999; text-transform: uppercase; font-weight: 600;">Overall Water Safety</p>
+                                <p style="margin: 0; font-size: 32px; font-weight: 700; color: ${verdictColor};">${overallVerdict.verdict}</p>
+                                <p style="margin: 8px 0 0 0; font-size: 14px; color: #555;">${overallVerdict.reason}</p>
+                            </div>
+                            <div style="text-align: center; font-size: 64px;">
+                                ${overallVerdict.verdict === 'Unsafe' ? '⚠️' : overallVerdict.verdict === 'Caution' ? '⚡' : '✅'}
+                            </div>
+                        </div>
                     </div>
 
-                    <!-- Metadata -->
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px;">
+                    <!-- Summary -->
+                    <div style="padding: 16px; background: #E8F4F8; border-radius: 8px; border-left: 4px solid #1F6FEB; margin-bottom: 20px;">
+                        <p style="margin: 0; font-size: 16px; color: #2C3E50;"><strong>Detected ${totalDetections} microorganism${totalDetections !== 1 ? 's' : ''} across ${perClass.length} species.</strong></p>
+                    </div>
+
+                    <!-- Key Metrics -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 30px;">
                         <div style="padding: 16px; background: white; border-radius: 8px; border-left: 4px solid #1F6FEB; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                            <p style="font-size: 12px; color: #999; margin: 0 0 8px 0; text-transform: uppercase;">Total Count</p>
-                            <p style="font-size: 28px; font-weight: 700; color: #1F6FEB; margin: 0;">${analysis.preds ? analysis.preds.length : 0}</p>
+                            <p style="font-size: 12px; color: #999; margin: 0 0 8px 0; text-transform: uppercase;">Total Organisms</p>
+                            <p style="font-size: 28px; font-weight: 700; color: #1F6FEB; margin: 0;">${totalDetections}</p>
                         </div>
                         <div style="padding: 16px; background: white; border-radius: 8px; border-left: 4px solid #27AE60; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                            <p style="font-size: 12px; color: #999; margin: 0 0 8px 0; text-transform: uppercase;">Analysis ID</p>
-                            <p style="font-size: 14px; font-weight: 600; color: #27AE60; margin: 0; word-break: break-all;">${analysis.id || 'N/A'}</p>
+                            <p style="font-size: 12px; color: #999; margin: 0 0 8px 0; text-transform: uppercase;">Species Found</p>
+                            <p style="font-size: 28px; font-weight: 700; color: #27AE60; margin: 0;">${perClass.length}</p>
                         </div>
-                        <div style="padding: 16px; background: white; border-radius: 8px; border-left: 4px solid #E67E22; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                            <p style="font-size: 12px; color: #999; margin: 0 0 8px 0; text-transform: uppercase;">Created</p>
-                            <p style="font-size: 14px; font-weight: 600; color: #E67E22; margin: 0;">${formatDate(analysis.created_at)}</p>
+                        <div style="padding: 16px; background: white; border-radius: 8px; border-left: 4px solid ${verdictColor}; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                            <p style="font-size: 12px; color: #999; margin: 0 0 8px 0; text-transform: uppercase;">Safety Status</p>
+                            <p style="font-size: 28px; font-weight: 700; color: ${verdictColor}; margin: 0;">${overallVerdict.verdict}</p>
                         </div>
                     </div>
 
-                    <!-- Species Table -->
+                    <!-- Annotated Image with Bounding Boxes -->
+                    ${annotatedImageB64 ? `
+                        <div style="margin-bottom: 30px;">
+                            <h3 style="color: #2C3E50; margin-top: 0;">Detected Organisms (with Bounding Boxes)</h3>
+                            <img src="data:image/png;base64,${annotatedImageB64}" alt="Annotated Detection" style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border: 2px solid #1F6FEB;">
+                        </div>
+                    ` : ''}
+
+                    <!-- Charts Section -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px;">
+                        ${pieChartB64 ? `
+                            <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                                <h3 style="margin-top: 0; color: #2C3E50;">Species Distribution (Pie Chart)</h3>
+                                <img src="data:image/png;base64,${pieChartB64}" alt="Pie Chart" style="max-width: 100%; height: auto; border-radius: 4px;">
+                            </div>
+                        ` : ''}
+                        ${barChartB64 ? `
+                            <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                                <h3 style="margin-top: 0; color: #2C3E50;">Species Count (Bar Chart)</h3>
+                                <img src="data:image/png;base64,${barChartB64}" alt="Bar Chart" style="max-width: 100%; height: auto; border-radius: 4px;">
+                            </div>
+                        ` : ''}
+                    </div>
+
+                    <!-- Organism Details Table -->
                     <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                        <h3 style="margin-top: 0; color: #2C3E50;">Species List</h3>
-                        ${buildSpeciesTable(analysis.preds)}
+                        <h3 style="margin-top: 0; color: #2C3E50;">Detailed Organism Breakdown</h3>
+                        ${buildOrganismTable(perClass)}
                     </div>
                 </div>
             `;
@@ -80,73 +130,94 @@
     }
 
     /**
-     * Show message when no current analysis
+     * Build detailed organism table with safety indicators
      */
-    function showNoCurrentAnalysis() {
-        const analyticsSection = document.querySelector('.stats');
-        if (analyticsSection) {
-            analyticsSection.innerHTML = `
-                <div style="padding: 40px; background: #F0F0F0; border-radius: 8px; text-align: center; color: #666;">
-                    <p>No current analysis. Please <a href="upload.html" style="color: #1F6FEB; font-weight: bold;">upload an image</a> to analyze.</p>
-                </div>
-            `;
+    function buildOrganismTable(perClass) {
+        if (!perClass || perClass.length === 0) {
+            return '<p style="color: #999;">No organisms detected.</p>';
         }
-    }
-
-    /**
-     * Build species table from predictions
-     */
-    function buildSpeciesTable(preds) {
-        if (!preds || preds.length === 0) {
-            return '<p style="color: #999;">No species data available.</p>';
-        }
-
-        // Group by class and count
-        const speciesCounts = {};
-        preds.forEach(pred => {
-            const speciesClass = pred.class || 'Unknown';
-            speciesCounts[speciesClass] = (speciesCounts[speciesClass] || 0) + 1;
-        });
 
         let tableHtml = `
             <table style="width: 100%; border-collapse: collapse; margin-top: 12px;">
                 <thead>
                     <tr style="background: #f5f5f5; border-bottom: 2px solid #ddd;">
-                        <th style="padding: 12px; text-align: left; font-weight: 600; border: 1px solid #eee;">Species</th>
+                        <th style="padding: 12px; text-align: left; font-weight: 600; border: 1px solid #eee;">Organism Name</th>
                         <th style="padding: 12px; text-align: center; font-weight: 600; border: 1px solid #eee;">Count</th>
-                        <th style="padding: 12px; text-align: center; font-weight: 600; border: 1px solid #eee;">Confidence</th>
+                        <th style="padding: 12px; text-align: center; font-weight: 600; border: 1px solid #eee;">Percentage</th>
+                        <th style="padding: 12px; text-align: center; font-weight: 600; border: 1px solid #eee;">Avg Confidence</th>
+                        <th style="padding: 12px; text-align: center; font-weight: 600; border: 1px solid #eee;">Safety Level</th>
+                        <th style="padding: 12px; text-align: left; font-weight: 600; border: 1px solid #eee;">Description</th>
                     </tr>
                 </thead>
                 <tbody>
         `;
 
-        Object.entries(speciesCounts)
-            .sort((a, b) => b[1] - a[1])
-            .forEach(([species, count]) => {
-                // Get average confidence for this species
-                const avgConfidence = getAverageConfidence(preds, species);
-                tableHtml += `
-                    <tr style="border-bottom: 1px solid #eee;">
-                        <td style="padding: 12px; border: 1px solid #eee; font-weight: 600;">${species}</td>
-                        <td style="padding: 12px; border: 1px solid #eee; text-align: center; color: #1F6FEB; font-weight: 700;">${count}</td>
-                        <td style="padding: 12px; border: 1px solid #eee; text-align: center; color: #E67E22;">${(avgConfidence * 100).toFixed(1)}%</td>
-                    </tr>
-                `;
-            });
+        perClass.forEach((org, index) => {
+            const safetyColor = org.safety === 'Unsafe' ? '#FF6B6B' : 
+                               org.safety === 'Caution' ? '#FFA500' : '#27AE60';
+            const safetyBg = org.safety === 'Unsafe' ? '#FFE5E5' : 
+                            org.safety === 'Caution' ? '#FFF3E0' : '#E8F8F5';
+            const bgColor = index % 2 === 0 ? '#ffffff' : '#f9f9f9';
+            
+            tableHtml += `
+                <tr style="border-bottom: 1px solid #eee; background: ${bgColor};">
+                    <td style="padding: 12px; border: 1px solid #eee; font-weight: 600; color: #2C3E50;">${org.class}</td>
+                    <td style="padding: 12px; border: 1px solid #eee; text-align: center; color: #1F6FEB; font-weight: 700;">${org.count}</td>
+                    <td style="padding: 12px; border: 1px solid #eee; text-align: center; color: #E67E22; font-weight: 600;">${org.percentage}%</td>
+                    <td style="padding: 12px; border: 1px solid #eee; text-align: center; color: #666;">${org.avg_confidence}</td>
+                    <td style="padding: 12px; border: 1px solid #eee; text-align: center;">
+                        <span style="background: ${safetyBg}; color: ${safetyColor}; padding: 6px 12px; border-radius: 20px; font-weight: 600; font-size: 13px;">
+                            ${org.safety}
+                        </span>
+                    </td>
+                    <td style="padding: 12px; border: 1px solid #eee; color: #666; font-size: 13px;">${org.description}</td>
+                </tr>
+            `;
+        });
 
         tableHtml += `</tbody></table>`;
         return tableHtml;
     }
 
     /**
-     * Get average confidence for a species
+     * Show message when no current analysis is available
      */
-    function getAverageConfidence(preds, species) {
-        const matching = preds.filter(p => p.class === species);
-        if (matching.length === 0) return 0;
-        
-        const sum = matching.reduce((acc, p) => acc + (p.confidence || 0), 0);
-        return sum / matching.length;
+    function showNoCurrentAnalysis() {
+        const analyticsSection = document.querySelector('.stats');
+        if (analyticsSection) {
+            analyticsSection.innerHTML = `
+                <div style="padding: 40px; text-align: center; background: #F0F4F8; border-radius: 8px; border: 2px dashed #DDD;">
+                    <p style="font-size: 18px; color: #999; margin: 0;">No current analysis available.</p>
+                    <p style="font-size: 14px; color: #AAA; margin: 12px 0 0 0;">Please upload an image to get started.</p>
+                    <a href="upload.html" class="btn primary" style="margin-top: 20px; display: inline-block; padding: 10px 20px; background: #1F6FEB; color: white; border-radius: 6px; text-decoration: none;">Upload Image</a>
+                </div>
+            `;
+        }
+    }
+
+    /**
+     * Format date string to readable format
+     */
+    function formatDate(dateString) {
+        try {
+            const date = new Date(dateString);
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+            
+            const dateObj = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+            
+            if (dateObj.getTime() === today.getTime()) {
+                return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            } else if (dateObj.getTime() === yesterday.getTime()) {
+                return 'Yesterday ' + date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            } else {
+                return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined });
+            }
+        } catch (e) {
+            return dateString;
+        }
     }
 
     /**
@@ -227,7 +298,7 @@
             }
 
             // Save to localStorage as current analysis
-            localStorage.setItem('current_analysis', JSON.stringify(analysis));
+            localStorage.setItem('currentAnalysis', JSON.stringify(analysis));
 
             // Refresh the page to display
             location.reload();
@@ -237,18 +308,6 @@
         }
     };
 
-    /**
-     * Format date string
-     */
-    function formatDate(dateString) {
-        if (!dateString) return 'N/A';
-        try {
-            const date = new Date(dateString);
-            return date.toLocaleString();
-        } catch (e) {
-            return dateString;
-        }
-    }
 })();
 
 /**

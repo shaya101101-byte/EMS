@@ -11,6 +11,7 @@ from routes.stats_route import router as stats_router
 from routes.status_route import router as status_router
 from routes.stats_api import router as stats_api_router
 from services.model_loader import initialize_model, MODEL
+from services.yolo_analyzer import initialize_model as initialize_yolo
 from fastapi.middleware.cors import CORSMiddleware
 from config import STATIC_DIR
 # ---- AquaSafe AI (Added Feature) ----
@@ -24,7 +25,7 @@ app = FastAPI(title="Microscopy AI Inference API")
 # CORS for frontend connection
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # change to your domain in production
+    allow_origins=["*", "http://localhost:3000", "http://127.0.0.1:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -33,7 +34,17 @@ app.add_middleware(
 # startup: initialize model
 @app.on_event("startup")
 def startup_event():
-    initialize_model()
+    # initialize legacy model loader (if used elsewhere)
+    try:
+        initialize_model()
+    except Exception:
+        pass
+    # initialize the YOLO analyzer used by /analyze-image
+    try:
+        initialize_yolo()
+    except Exception as e:
+        # Log but don't crash startup — endpoint will return error if model missing
+        print('YOLO analyzer initialize failed:', e)
     # ensure static dir exists
     os.makedirs(STATIC_DIR, exist_ok=True)
     os.makedirs("uploaded_images", exist_ok=True)
@@ -43,6 +54,7 @@ def startup_event():
 
 # Mount static files directories
 os.makedirs(STATIC_DIR, exist_ok=True)
+os.makedirs("static/results", exist_ok=True)
 os.makedirs("uploaded_images", exist_ok=True)
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
@@ -58,6 +70,8 @@ app.include_router(history_router, prefix="")
 app.include_router(stats_router, prefix="")
 app.include_router(status_router, prefix="")
 app.include_router(stats_api_router, prefix="")
+from routes.analyze_image import router as analyze_router
+app.include_router(analyze_router, prefix="")
 
 # ---- AquaSafe AI Endpoint (Added Feature) ----
 @app.post("/ai/analyze")
