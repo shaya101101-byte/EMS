@@ -1,0 +1,57 @@
+/* processingModal.css - styles for the processing modal */
+#processingModal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.45);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+#processingModal .modal-card{
+  width: 360px;
+  max-width: 90%;
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px 24px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+  text-align: center;
+}
+#processingModal .title{
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+#processingModal .phase{
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 14px;
+}
+.progress-ring{
+  position: relative;
+  width: 120px;
+  height: 120px;
+  margin: 12px auto 16px auto;
+}
+.progress-ring svg{ transform: rotate(-90deg); }
+.progress-ring circle{
+  fill: transparent;
+  stroke-width: 10;
+  stroke-linecap: round;
+}
+.progress-ring .bg{ stroke: #eee; }
+.progress-ring .fg{ stroke: #1F6FEB; stroke-dasharray: 0 1000; }
+.progress-percent{
+  position: absolute;
+  top: 50%; left: 50%; transform: translate(-50%,-50%);
+  font-weight: 700; font-size: 20px;
+}
+.phase-steps{ display:flex; gap:8px; justify-content:center; margin-top:8px; }
+.phase-steps .step{ font-size:12px; color:#999; padding:6px 8px; border-radius:6px; background:#f7f7f7 }
+.phase-steps .step.active{ background:#1F6FEB; color:#fff }
+
+/* small responsive tweak */
+@media (max-width:420px){ .progress-ring{ width: 96px; height: 96px } }

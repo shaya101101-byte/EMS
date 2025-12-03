@@ -507,4 +507,62 @@
 
     // expose globally
     window.createPDFReport = createPDFReport;
+    
+    // Handler for backend PDF report download
+    window.downloadBackendPDF = function() {
+        fetch("http://127.0.0.1:8000/generate-report")
+            .then(response => response.blob())
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "report.pdf";
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+            })
+            .catch(err => console.error("PDF download failed:", err));
+    };
+})();
+
+// --- PATCH: Show Annotated Image if backend provides bounding box output ---
+document.addEventListener('DOMContentLoaded', function() {
+    const analysisJson = localStorage.getItem('currentAnalysis');
+    if (analysisJson) {
+        try {
+            const response = JSON.parse(analysisJson);
+            if (response.annotated_image_url) {
+                const annotatedImg = document.getElementById('annotatedImage');
+                if (annotatedImg) {
+                    annotatedImg.src = response.annotated_image_url;
+                    annotatedImg.style.display = 'block';
+                }
+            }
+        } catch (e) {
+            console.error('Error showing annotated image:', e);
+        }
+    }
+});
+
+// --- PATCH: Fix organism names so they show correctly instead of "undefined" ---
+(function() {
+    const analysisJson = localStorage.getItem('currentAnalysis');
+    if (analysisJson) {
+        try {
+            const response = JSON.parse(analysisJson);
+            if (Array.isArray(response.organisms)) {
+                response.organisms = response.organisms.map(org => ({
+                    name: org.name || org.class || org.label || "Unknown",
+                    count: org.count ?? 0,
+                    confidence: org.confidence ?? 0,
+                    safety: org.safety ?? "Unknown",
+                    description: org.description ?? "Not available"
+                }));
+                localStorage.setItem('currentAnalysis', JSON.stringify(response));
+            }
+        } catch (e) {
+            console.error('Error fixing organism names:', e);
+        }
+    }
 })();

@@ -76,13 +76,35 @@
         <div class="stats" id="stats">
             <p style="text-align: center; color: #999;">Loading current analysis...</p>
             <div style="text-align:center; margin-top:12px;">
-                <button id="downloadPdfBtn" class="btn" onclick="createPDFReport()">Download PDF Report</button>
+                <button id="downloadPdfBtn" class="btn" onclick="downloadBackendPDF()">Download PDF Report</button>
             </div>
         </div>
     </section>
 
     <script src="js/api-client.js"></script>
     <script src="js/analytics.js"></script>
+
+    <!-- Advanced Analytics & Visualization (added) -->
+    <section id="advanced-analytics">
+        <h3>Advanced Analytics & Visualization</h3>
+        <div class="charts-row">
+            <div class="charts-col"><canvas id="speciesBarChart" width="400" height="250"></canvas></div>
+            <div class="charts-col"><canvas id="safetyPieChart" width="300" height="250"></canvas></div>
+            <div class="charts-col"><canvas id="trendLineChart" width="400" height="250"></canvas></div>
+        </div>
+
+        <h3 style="margin-top: 32px;">Detailed Organism Breakdown</h3>
+        <button id="downloadPdfBtn" class="download-report-btn">
+            Download PDF Report
+        </button>
+
+        <h3 style="margin-top: 32px;">Detected Organisms (with Bounding Boxes)</h3>
+        <img id="annotatedImage" src="" alt="Annotated Detection" style="max-width: 100%; border-radius: 8px; display:none; margin-top:10px;">
+    </section>
+
+    <link rel="stylesheet" href="analytics_charts.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="analytics_charts.js"></script>
 
 </body>
 </html>

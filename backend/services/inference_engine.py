@@ -54,14 +54,24 @@ def run_inference_on_bytes(image_bytes):
 
         counts, total, dominant = summarize_counts(boxes)
         
-        # Calculate percentages for species
+        # Calculate per-species average confidence
+        species_confidence = {}
+        for box in boxes:
+            cls = box["class"]
+            if cls not in species_confidence:
+                species_confidence[cls] = []
+            species_confidence[cls].append(box["score"])
+        
+        # Calculate percentages and average confidence for species
         species_list = []
         for class_name, count in counts.items():
             percentage = round((count / total * 100), 1) if total > 0 else 0
+            avg_conf = round(sum(species_confidence.get(class_name, [0])) / (len(species_confidence.get(class_name, [1])) or 1), 3)
             species_list.append({
                 "name": class_name,
                 "count": count,
-                "percentage": percentage
+                "percentage": percentage,
+                "confidence": avg_conf
             })
         
         # Sort by count (descending)

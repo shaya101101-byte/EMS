@@ -40,7 +40,32 @@
         </div>
     </section>
 
+    <!-- Processing modal markup -->
+    <div id="processingModal">
+      <div class="modal-card">
+        <div class="title">Processing Image</div>
+        <div class="phase">Preparing…</div>
+        <div class="progress-ring">
+          <svg width="120" height="120">
+            <circle class="bg" cx="60" cy="60" r="48"></circle>
+            <circle class="fg" cx="60" cy="60" r="48"></circle>
+          </svg>
+          <div class="progress-percent">0%</div>
+        </div>
+        <div class="phase-steps">
+          <div class="step">Uploading</div>
+          <div class="step">Segmenting</div>
+          <div class="step">Classifying</div>
+          <div class="step">Done</div>
+        </div>
+      </div>
+    </div>
+
+    <link rel="stylesheet" href="processingModal.css">
+    <script src="processingModal.js"></script>
+
     <script>
+    // Preserve original behavior but wrap with processing modal
     const input = document.getElementById("imageInput");
     const preview = document.getElementById("previewImage");
     const analyzeBtn = document.getElementById("analyzeBtn");
@@ -53,12 +78,12 @@
         analyzeBtn.style.display = "inline-block";
     });
 
-    analyzeBtn.addEventListener("click", async () => {
+    // Extracted original handler into a function so we can wrap it
+    async function originalAnalyzeHandler(){
         const file = input.files[0];
         if (!file) return alert("Please select an image!");
 
         const formData = new FormData();
-        // send under both keys to support backends expecting either name
         formData.append("file", file);
         formData.append("image", file);
 
@@ -69,10 +94,8 @@
             });
 
             const data = await res.json();
-            // store under the requested key
             localStorage.setItem("analysisResults", JSON.stringify(data));
 
-            // also store a transformed copy for legacy analytics code compatibility
             try {
                 const transformed = (function(predictResponse){
                     let counts = {};
@@ -101,13 +124,25 @@
                 })(data);
                 localStorage.setItem('currentAnalysis', JSON.stringify(transformed));
             } catch(e){
-                // ignore transform errors
                 console.warn('Transform failed', e);
             }
 
+            // navigate to analytics (same behavior as before)
             window.location.href = 'analytics.html';
         } catch (err){
             alert('Upload failed: '+err.message);
+        }
+    }
+
+    // New wrapper: show modal first, run original handler, then hide modal
+    analyzeBtn.addEventListener("click", async () => {
+        try{
+            if (typeof showProcessingModal === 'function') showProcessingModal();
+        } catch(e){}
+        try{
+            await originalAnalyzeHandler();
+        } finally {
+            try{ if (typeof hideProcessingModal === 'function') hideProcessingModal(); } catch(e){}
         }
     });
     </script>
