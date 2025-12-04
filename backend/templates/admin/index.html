@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="/static/admin/styles.css">
+</head>
+<body>
+    <div class="admin-container">
+        <nav class="admin-nav">
+            <h1>🔧 Admin Dashboard</h1>
+            <ul>
+                <li><a href="/admin" class="active">Home</a></li>
+                <li><a href="/admin/history">History</a></li>
+                <li><a href="/admin/uploads">Uploads</a></li>
+                <li><a href="/admin/stats">Stats</a></li>
+                <li><a href="/admin/logs">Logs</a></li>
+                <li><a href="/admin/events">Events</a></li>
+            </ul>
+        </nav>
+        <main class="admin-main">
+            <div class="dashboard">
+                <h2>Backend Admin System</h2>
+                <p>Real-time visibility of all backend operations.</p>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>Total Analyses</h3>
+                        <p id="stat-total" class="stat-number">--</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Recent Images</h3>
+                        <p id="stat-images" class="stat-number">--</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>JSON Files</h3>
+                        <p id="stat-json" class="stat-number">--</p>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h3>Quick Links</h3>
+                    <ul>
+                        <li><a href="/admin/history">📊 View Analysis History</a></li>
+                        <li><a href="/admin/uploads">📸 Browse Uploaded Images</a></li>
+                        <li><a href="/admin/stats">📈 View Statistics</a></li>
+                        <li><a href="/admin/logs">📝 View API Logs</a></li>
+                        <li><a href="/admin/events">⚡ Live Events</a></li>
+                    </ul>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/static/admin/admin.js"></script>
+    <script>
+        // Extract token from URL and store it
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get("token") || localStorage.getItem("admin_token") || "ADMIN_TOKEN";
+        localStorage.setItem("admin_token", token);
+        
+        // Redirect to same page with token in URL for all links
+        document.querySelectorAll("a[href^='/admin']").forEach(a => {
+            a.href += (a.href.includes("?") ? "&" : "?") + "token=" + token;
+        });
+
+        // Load dashboard stats on init
+        async function loadStats() {
+            try {
+                const resp = await fetch(`/admin/api/stats?token=${token}`, {headers: {"x-admin-token": token}});
+                if (resp.ok) {
+                    const data = await resp.json();
+                    document.getElementById("stat-total").textContent = data.total_analyses || 0;
+                }
+                const uploads = await fetch(`/admin/api/uploads?token=${token}`, {headers: {"x-admin-token": token}});
+                if (uploads.ok) {
+                    const data = await uploads.json();
+                    document.getElementById("stat-images").textContent = data.images.length || 0;
+                }
+                const hist = await fetch(`/admin/api/history?token=${token}`, {headers: {"x-admin-token": token}});
+                if (hist.ok) {
+                    const data = await hist.json();
+                    document.getElementById("stat-json").textContent = (data.files || []).length;
+                }
+            } catch (e) {
+                console.error("Error loading stats:", e);
+            }
+        }
+        loadStats();
+        setInterval(loadStats, 5000);
+    </script>
+</body>
+</html>

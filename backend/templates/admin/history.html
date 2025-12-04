@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Analysis History</title>
+    <link rel="stylesheet" href="/static/admin/styles.css">
+</head>
+<body>
+    <div class="admin-container">
+        <nav class="admin-nav">
+            <h1>🔧 Admin Dashboard</h1>
+            <ul>
+                <li><a href="/admin">Home</a></li>
+                <li><a href="/admin/history" class="active">History</a></li>
+                <li><a href="/admin/uploads">Uploads</a></li>
+                <li><a href="/admin/stats">Stats</a></li>
+                <li><a href="/admin/logs">Logs</a></li>
+                <li><a href="/admin/events">Events</a></li>
+            </ul>
+        </nav>
+        <main class="admin-main">
+            <h2>Analysis History</h2>
+            <p>All image analyses performed by the backend.</p>
+            
+            <div class="filter-bar">
+                <input type="text" id="search" placeholder="Search by filename or timestamp...">
+                <button onclick="filterHistory()">Filter</button>
+            </div>
+
+            <table id="history-table" class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Timestamp</th>
+                        <th>Image</th>
+                        <th>Total Detections</th>
+                        <th>Quality</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="history-body">
+                    <tr><td colspan="6" class="loading">Loading history...</td></tr>
+                </tbody>
+            </table>
+        </main>
+    </div>
+
+    <script src="/static/admin/admin.js"></script>
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get("token") || localStorage.getItem("admin_token") || "ADMIN_TOKEN";
+        localStorage.setItem("admin_token", token);
+        
+        document.querySelectorAll("a[href^='/admin']").forEach(a => {
+            a.href += (a.href.includes("?") ? "&" : "?") + "token=" + token;
+        });
+
+        async function loadHistory() {
+            try {
+                const resp = await fetch(`/admin/api/history?token=${token}`, {headers: {"x-admin-token": token}});
+                if (resp.ok) {
+                    const data = await resp.json();
+                    const rows = data.db || [];
+                    const tbody = document.getElementById("history-body");
+                    tbody.innerHTML = "";
+                    
+                    if (rows.length === 0) {
+                        tbody.innerHTML = "<tr><td colspan='6'>No history found</td></tr>";
+                        return;
+                    }
+
+                    rows.forEach(r => {
+                        const tr = document.createElement("tr");
+                        tr.innerHTML = `
+                            <td>${r.id || "?"}</td>
+                            <td>${new Date(r.timestamp || r.created_at).toLocaleString()}</td>
+                            <td><a href="${r.image_url || '#'}">${r.image_path ? r.image_path.split('/').pop() : "N/A"}</a></td>
+                            <td>${r.total || 0}</td>
+                            <td>${r.quality || "?"}</td>
+                            <td><a href="/admin/view/${r.id || r.filename}?token=${token}">View</a></td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+            } catch (e) {
+                console.error("Error loading history:", e);
+                document.getElementById("history-body").innerHTML = "<tr><td colspan='6'>Error loading history</td></tr>";
+            }
+        }
+
+        function filterHistory() {
+            const search = document.getElementById("search").value.toLowerCase();
+            const rows = document.querySelectorAll("#history-body tr");
+            rows.forEach(r => {
+                r.style.display = r.textContent.toLowerCase().includes(search) ? "" : "none";
+            });
+        }
+
+        loadHistory();
+        setInterval(loadHistory, 3000);
+    </script>
+</body>
+</html>

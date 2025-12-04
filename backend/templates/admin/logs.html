@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Logs</title>
+    <link rel="stylesheet" href="/static/admin/styles.css">
+</head>
+<body>
+    <div class="admin-container">
+        <nav class="admin-nav">
+            <h1>🔧 Admin Dashboard</h1>
+            <ul>
+                <li><a href="/admin">Home</a></li>
+                <li><a href="/admin/history">History</a></li>
+                <li><a href="/admin/uploads">Uploads</a></li>
+                <li><a href="/admin/stats">Stats</a></li>
+                <li><a href="/admin/logs" class="active">Logs</a></li>
+                <li><a href="/admin/events">Events</a></li>
+            </ul>
+        </nav>
+        <main class="admin-main">
+            <h2>API Request Logs</h2>
+            <p>Real-time log of API requests from frontend to backend.</p>
+            
+            <div class="log-controls">
+                <button onclick="clearLogs()">Clear Logs</button>
+                <label><input type="checkbox" id="auto-scroll" checked> Auto-scroll</label>
+            </div>
+
+            <div id="logs-container" class="logs-container">
+                <p class="loading">Loading logs...</p>
+            </div>
+        </main>
+    </div>
+
+    <script src="/static/admin/admin.js"></script>
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get("token") || localStorage.getItem("admin_token") || "ADMIN_TOKEN";
+        localStorage.setItem("admin_token", token);
+        
+        document.querySelectorAll("a[href^='/admin']").forEach(a => {
+            a.href += (a.href.includes("?") ? "&" : "?") + "token=" + token;
+        });
+
+        let logs = [];
+        const logsContainer = document.getElementById("logs-container");
+
+        function addLog(msg) {
+            logs.unshift({timestamp: new Date().toLocaleTimeString(), msg});
+            if (logs.length > 100) logs.pop();
+            renderLogs();
+        }
+
+        function renderLogs() {
+            logsContainer.innerHTML = logs.map(log => 
+                `<div class="log-entry">[${log.timestamp}] ${log.msg}</div>`
+            ).join("");
+            
+            if (document.getElementById("auto-scroll").checked) {
+                logsContainer.scrollTop = logsContainer.scrollHeight;
+            }
+        }
+
+        function clearLogs() {
+            logs = [];
+            renderLogs();
+        }
+
+        // Simulate API log stream (in production, this would connect to a real log endpoint)
+        function startLogStream() {
+            
+            // Poll for new API activity
+            setInterval(async () => {
+                try {
+                    const resp = await fetch(`/admin/api/history?token=${token}`, {headers: {"x-admin-token": token}});
+                    if (resp.ok) {
+                        const data = await resp.json();
+                        const rows = data.db || [];
+                        if (rows.length > 0) {
+                            const latest = rows[0];
+                            addLog(`[/analyze-image] Image: ${latest.image_path || "unknown"}, Detections: ${latest.total}`);
+                        }
+                    }
+                } catch (e) {
+                    console.error("Error polling logs:", e);
+                }
+            }, 3000);
+        }
+
+        startLogStream();
+        addLog("Admin logs started. Monitoring API activity...");
+    </script>
+</body>
+</html>

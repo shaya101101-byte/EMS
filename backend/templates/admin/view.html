@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>View Analysis</title>
+    <link rel="stylesheet" href="/static/admin/styles.css">
+</head>
+<body>
+    <div class="admin-container">
+        <nav class="admin-nav">
+            <h1>🔧 Admin Dashboard</h1>
+            <ul>
+                <li><a href="/admin">Home</a></li>
+                <li><a href="/admin/history">History</a></li>
+                <li><a href="/admin/uploads">Uploads</a></li>
+                <li><a href="/admin/stats">Stats</a></li>
+                <li><a href="/admin/logs">Logs</a></li>
+                <li><a href="/admin/events">Events</a></li>
+            </ul>
+        </nav>
+        <main class="admin-main">
+            <h2>Detailed Analysis View</h2>
+            <a href="/admin/history" class="back-link">← Back to History</a>
+            
+            <div id="view-content" class="view-content">
+                <p class="loading">Loading analysis data...</p>
+            </div>
+        </main>
+    </div>
+
+    <script src="/static/admin/admin.js"></script>
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get("token") || localStorage.getItem("admin_token") || "ADMIN_TOKEN";
+        localStorage.setItem("admin_token", token);
+        
+        document.querySelectorAll("a[href^='/admin']").forEach(a => {
+            a.href += (a.href.includes("?") ? "&" : "?") + "token=" + token;
+        });
+
+        async function loadView() {
+            const id = window.location.pathname.split("/").pop();
+            
+            try {
+                // Get full history
+                const resp = await fetch(`/admin/api/history?token=${token}`, {headers: {"x-admin-token": token}});
+                if (resp.ok) {
+                    const data = await resp.json();
+                    const rows = data.db || [];
+                    const item = rows.find(r => String(r.id) === id);
+                    
+                    if (!item) {
+                        document.getElementById("view-content").innerHTML = "<p>Analysis not found</p>";
+                        return;
+                    }
+
+                    let html = `
+                        <div class="analysis-detail">
+                            <h3>Analysis #${item.id}</h3>
+                            <p><strong>Timestamp:</strong> ${new Date(item.timestamp || item.created_at).toLocaleString()}</p>
+                            <p><strong>Image:</strong> <a href="${item.image_url}">${item.image_path}</a></p>
+                            <p><strong>Total Detections:</strong> ${item.total}</p>
+                            <p><strong>Quality:</strong> ${item.quality || "Unknown"}</p>
+                            <p><strong>Confidence:</strong> ${item.confidence || "N/A"}</p>
+                            <h4>Detections by Class:</h4>
+                            <pre>${JSON.stringify(item.counts || {}, null, 2)}</pre>
+                        </div>
+                    `;
+                    document.getElementById("view-content").innerHTML = html;
+                }
+            } catch (e) {
+                console.error("Error loading view:", e);
+                document.getElementById("view-content").innerHTML = `<p>Error: ${e.message}</p>`;
+            }
+        }
+
+        loadView();
+    </script>
+</body>
+</html>

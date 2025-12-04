@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Uploaded Images</title>
+    <link rel="stylesheet" href="/static/admin/styles.css">
+</head>
+<body>
+    <div class="admin-container">
+        <nav class="admin-nav">
+            <h1>🔧 Admin Dashboard</h1>
+            <ul>
+                <li><a href="/admin">Home</a></li>
+                <li><a href="/admin/history">History</a></li>
+                <li><a href="/admin/uploads" class="active">Uploads</a></li>
+                <li><a href="/admin/stats">Stats</a></li>
+                <li><a href="/admin/logs">Logs</a></li>
+                <li><a href="/admin/events">Events</a></li>
+            </ul>
+        </nav>
+        <main class="admin-main">
+            <h2>Uploaded Images</h2>
+            <p>All images uploaded for analysis.</p>
+            
+            <div id="images-gallery" class="gallery">
+                <p class="loading">Loading images...</p>
+            </div>
+        </main>
+    </div>
+
+    <script src="/static/admin/admin.js"></script>
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get("token") || localStorage.getItem("admin_token") || "ADMIN_TOKEN";
+        localStorage.setItem("admin_token", token);
+        
+        document.querySelectorAll("a[href^='/admin']").forEach(a => {
+            a.href += (a.href.includes("?") ? "&" : "?") + "token=" + token;
+        });
+
+        async function loadUploads() {
+            try {
+                const resp = await fetch(`/admin/api/uploads?token=${token}`, {headers: {"x-admin-token": token}});
+                if (resp.ok) {
+                    const data = await resp.json();
+                    const imgs = data.images || [];
+                    const gallery = document.getElementById("images-gallery");
+                    
+                    if (imgs.length === 0) {
+                        gallery.innerHTML = "<p>No uploaded images</p>";
+                        return;
+                    }
+
+                    gallery.innerHTML = imgs.map(img => `
+                        <div class="gallery-item">
+                            <img src="${img.url}" alt="${img.filename}" loading="lazy">
+                            <p>${img.filename}</p>
+                            <small>${new Date(img.timestamp).toLocaleString()}</small>
+                            <small>${(img.size / 1024).toFixed(1)} KB</small>
+                        </div>
+                    `).join("");
+                }
+            } catch (e) {
+                console.error("Error loading uploads:", e);
+                document.getElementById("images-gallery").innerHTML = `<p>Error: ${e.message}</p>`;
+            }
+        }
+
+        loadUploads();
+        setInterval(loadUploads, 5000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Statistics</title>
+    <link rel="stylesheet" href="/static/admin/styles.css">
+</head>
+<body>
+    <div class="admin-container">
+        <nav class="admin-nav">
+            <h1>🔧 Admin Dashboard</h1>
+            <ul>
+                <li><a href="/admin">Home</a></li>
+                <li><a href="/admin/history">History</a></li>
+                <li><a href="/admin/uploads">Uploads</a></li>
+                <li><a href="/admin/stats" class="active">Stats</a></li>
+                <li><a href="/admin/logs">Logs</a></li>
+                <li><a href="/admin/events">Events</a></li>
+            </ul>
+        </nav>
+        <main class="admin-main">
+            <h2>Statistics & Analytics</h2>
+            
+            <div class="stats-section">
+                <div class="stat-card large">
+                    <h3>Total Analyses</h3>
+                    <p id="stat-total" class="stat-number">0</p>
+                </div>
+                <div class="stat-card large">
+                    <h3>Organism Classes Detected</h3>
+                    <p id="stat-classes" class="stat-number">0</p>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>Detections by Class</h3>
+                <table id="stats-table" class="data-table">
+                    <thead>
+                        <tr><th>Class</th><th>Count</th></tr>
+                    </thead>
+                    <tbody id="stats-body">
+                        <tr><td colspan="2" class="loading">Loading statistics...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <script src="/static/admin/admin.js"></script>
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get("token") || localStorage.getItem("admin_token") || "ADMIN_TOKEN";
+        localStorage.setItem("admin_token", token);
+        
+        document.querySelectorAll("a[href^='/admin']").forEach(a => {
+            a.href += (a.href.includes("?") ? "&" : "?") + "token=" + token;
+        });
+
+        async function loadStats() {
+            try {
+                const resp = await fetch(`/admin/api/stats?token=${token}`, {headers: {"x-admin-token": token}});
+                if (resp.ok) {
+                    const data = await resp.json();
+                    document.getElementById("stat-total").textContent = data.total_analyses || 0;
+                    document.getElementById("stat-classes").textContent = Object.keys(data.per_class || {}).length;
+
+                    const tbody = document.getElementById("stats-body");
+                    tbody.innerHTML = "";
+                    const perClass = data.per_class || {};
+                    
+                    if (Object.keys(perClass).length === 0) {
+                        tbody.innerHTML = "<tr><td colspan='2'>No detection data</td></tr>";
+                        return;
+                    }
+
+                    Object.entries(perClass).forEach(([k, v]) => {
+                        const tr = document.createElement("tr");
+                        tr.innerHTML = `<td>${k}</td><td>${v}</td>`;
+                        tbody.appendChild(tr);
+                    });
+                }
+            } catch (e) {
+                console.error("Error loading stats:", e);
+                document.getElementById("stats-body").innerHTML = "<tr><td colspan='2'>Error loading</td></tr>";
+            }
+        }
+
+        loadStats();
+        setInterval(loadStats, 5000);
+    </script>
+</body>
+</html>

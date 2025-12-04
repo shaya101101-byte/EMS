@@ -78,6 +78,10 @@ app.include_router(analytics_data_router, prefix="")
 from routes.analytics_report_pdf import router as analytics_report_pdf_router
 app.include_router(analytics_report_pdf_router, prefix="")
 
+# ---- Admin Dashboard (Added Feature) ----
+from routes.admin import router as admin_router
+app.include_router(admin_router, prefix="")
+
 # ---- AquaSafe AI Endpoint (Added Feature) ----
 @app.post("/ai/analyze")
 async def ai_analyze(image: UploadFile = File(...)):

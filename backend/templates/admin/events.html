@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Live Events</title>
+    <link rel="stylesheet" href="/static/admin/styles.css">
+</head>
+<body>
+    <div class="admin-container">
+        <nav class="admin-nav">
+            <h1>🔧 Admin Dashboard</h1>
+            <ul>
+                <li><a href="/admin">Home</a></li>
+                <li><a href="/admin/history">History</a></li>
+                <li><a href="/admin/uploads">Uploads</a></li>
+                <li><a href="/admin/stats">Stats</a></li>
+                <li><a href="/admin/logs">Logs</a></li>
+                <li><a href="/admin/events" class="active">Events</a></li>
+            </ul>
+        </nav>
+        <main class="admin-main">
+            <h2>Live Backend Events</h2>
+            <p>Real-time stream of backend activity and frontend→backend communication.</p>
+            
+            <div class="event-controls">
+                <button onclick="toggleStream()">
+                    <span id="stream-status">Start Stream</span>
+                </button>
+                <button onclick="clearEvents()">Clear Events</button>
+            </div>
+
+            <div id="events-container" class="events-container">
+                <p class="loading">Waiting for events...</p>
+            </div>
+        </main>
+    </div>
+
+    <script src="/static/admin/admin.js"></script>
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get("token") || localStorage.getItem("admin_token") || "ADMIN_TOKEN";
+        localStorage.setItem("admin_token", token);
+        
+        document.querySelectorAll("a[href^='/admin']").forEach(a => {
+            a.href += (a.href.includes("?") ? "&" : "?") + "token=" + token;
+        });
+
+        let eventSource = null;
+        let streaming = false;
+
+        function toggleStream() {
+            if (streaming) {
+                stopStream();
+            } else {
+                startStream();
+            }
+        }
+
+        function startStream() {
+            const container = document.getElementById("events-container");
+            container.innerHTML = "";
+            streaming = true;
+            document.getElementById("stream-status").textContent = "Stop Stream";
+
+            try {
+                eventSource = new EventSource(`/admin/api/events/stream?token=${token}`);
+                eventSource.addEventListener("message", (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        addEvent(data);
+                    } catch (e) {
+                        console.error("Error parsing event:", e);
+                    }
+                });
+                eventSource.onerror = (e) => {
+                    console.error("EventSource error:", e);
+                    addEvent({error: "Stream disconnected"});
+                    streaming = false;
+                    document.getElementById("stream-status").textContent = "Start Stream";
+                };
+            } catch (e) {
+                console.error("Error starting stream:", e);
+                addEvent({error: e.message});
+                streaming = false;
+                document.getElementById("stream-status").textContent = "Start Stream";
+            }
+        }
+
+        function stopStream() {
+            if (eventSource) {
+                eventSource.close();
+                eventSource = null;
+            }
+            streaming = false;
+            document.getElementById("stream-status").textContent = "Start Stream";
+            addEvent({msg: "Stream stopped"});
+        }
+
+        function addEvent(data) {
+            const container = document.getElementById("events-container");
+            if (container.textContent.includes("Waiting for events")) {
+                container.innerHTML = "";
+            }
+
+            const eventDiv = document.createElement("div");
+            eventDiv.className = "event-entry";
+            eventDiv.innerHTML = `
+                <small>${new Date().toLocaleTimeString()}</small>
+                <pre>${JSON.stringify(data, null, 2)}</pre>
+            `;
+            container.insertBefore(eventDiv, container.firstChild);
+
+            // Keep only last 50 events
+            while (container.children.length > 50) {
+                container.removeChild(container.lastChild);
+            }
+        }
+
+        function clearEvents() {
+            document.getElementById("events-container").innerHTML = "<p class='loading'>Waiting for events...</p>";
+        }
+
+        // Auto-start stream on page load
+        window.addEventListener("load", () => {
+            setTimeout(startStream, 500);
+        });
+
+        // Stop on page unload
+        window.addEventListener("beforeunload", () => {
+            if (eventSource) eventSource.close();
+        });
+    </script>
+</body>
+</html>
