@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Analytics</title>
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="assets/css/analytics.css">
 </head>
 <body>
 
@@ -19,13 +20,39 @@
         const arrivedFromUpload = (document.referrer || '').split('/').pop().split('?')[0] === 'upload.html';
 
         // If no stored results at all, leave the page in its default empty state.
-        if (!results) return;
+        if (!results) {
+            // Show empty-state and preview cards
+            document.addEventListener('DOMContentLoaded', function() {
+                const emptyState = document.getElementById('emptyStateCard');
+                const previewCards = document.getElementById('previewStatCards');
+                if (emptyState) emptyState.style.display = 'block';
+                if (previewCards) previewCards.style.display = 'grid';
+            });
+            return;
+        }
 
         // If results exist but are NOT fresh (neither session flag nor referrer from upload), do not populate.
-        if (!sessionFlag && !arrivedFromUpload) return;
+        if (!sessionFlag && !arrivedFromUpload) {
+            // Show empty-state and preview cards
+            document.addEventListener('DOMContentLoaded', function() {
+                const emptyState = document.getElementById('emptyStateCard');
+                const previewCards = document.getElementById('previewStatCards');
+                if (emptyState) emptyState.style.display = 'block';
+                if (previewCards) previewCards.style.display = 'grid';
+            });
+            return;
+        }
 
         // If we did arrive from upload, mark session so refresh keeps it visible during this tab session.
         if (arrivedFromUpload) sessionStorage.setItem('freshAnalysis','1');
+
+        // Hide empty-state and preview cards when analysis exists and is fresh
+        document.addEventListener('DOMContentLoaded', function() {
+            const emptyState = document.getElementById('emptyStateCard');
+            const previewCards = document.getElementById('previewStatCards');
+            if (emptyState) emptyState.style.display = 'none';
+            if (previewCards) previewCards.style.display = 'none';
+        });
 
         // transform predict response into the legacy `currentAnalysis` shape used by analytics.js
         try{
@@ -82,6 +109,34 @@
     <section class="content">
         <h2>Analytics & Statistics</h2>
         <p>View statistics and trends over time.</p>
+
+        <!-- Empty State Card (shown when no analysis yet) -->
+        <div id="emptyStateCard" class="empty-state-card">
+            <div class="empty-state-icon">🔬</div>
+            <h3 class="empty-state-title">No Water Sample Analyzed</h3>
+            <p class="empty-state-subtitle">To get started, upload a microscopic water image to generate a full microbiological analysis.</p>
+            <div class="empty-state-illustration"></div>
+            <p class="empty-state-cta">⬆ Upload a water sample to begin analysis</p>
+        </div>
+
+        <!-- Disabled Preview Stat Cards -->
+        <div id="previewStatCards" class="preview-stat-cards">
+            <div class="preview-stat-card">
+                <div class="stat-icon">🦠</div>
+                <h4 class="stat-title">Organism Count</h4>
+                <p class="stat-description">Will show total detected microorganisms</p>
+            </div>
+            <div class="preview-stat-card">
+                <div class="stat-icon">🌱</div>
+                <h4 class="stat-title">Species Identification</h4>
+                <p class="stat-description">Will display recognized plankton species</p>
+            </div>
+            <div class="preview-stat-card">
+                <div class="stat-icon">⚠️</div>
+                <h4 class="stat-title">Water Safety Result</h4>
+                <p class="stat-description">Will classify water quality</p>
+            </div>
+        </div>
 
         <div class="stats" id="stats">
             <p style="text-align: center; color: #999;">Loading current analysis...</p>
