@@ -5,6 +5,89 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Upload Image</title>
     <link rel="stylesheet" href="css/style.css">
+    <style>
+        /* Page-local UI enhancements (offline, upload-only) */
+        body { background: linear-gradient(to bottom right, #dfe9f3, #ffffff); }
+        .upload-section { display:flex; align-items:center; justify-content:center; padding:48px 16px; }
+        .upload-box {
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+            border-radius: 20px;
+            padding: 48px;
+            width: 100%;
+            max-width: 520px;
+            text-align: center;
+            margin: 12px;
+        }
+
+        .upload-box h2 { margin: 6px 0 8px; color: #083b75; font-size: 20px; }
+        .upload-box p { margin: 0 0 18px; color:#34526a; font-size:14px; }
+
+        /* Icon above title */
+        .upload-icon { font-size:34px; display:block; margin-bottom:8px; }
+
+        /* File preview tweaks */
+        #previewImage { max-width: 100%; display: none; border-radius: 10px; margin-top: 14px; }
+
+        /* Custom file chooser button - visually wraps the original input (input keeps same id)
+           The input remains accessible to existing JS via `#imageInput` */
+        .file-chooser { margin: 8px 0; }
+        .choose-btn {
+            display: inline-block;
+            background: #eef3ff;
+            color: #0b3b75;
+            padding: 12px 18px;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid rgba(11,75,160,0.06);
+            box-shadow: 0 6px 18px rgba(11,75,160,0.04);
+            font-size: 15px;
+        }
+        .choose-btn input[type="file"] {
+            position: absolute !important;
+            left: -9999px !important;
+            width: 1px !important;
+            height: 1px !important;
+            overflow: hidden !important;
+            opacity: 0 !important;
+        }
+
+        /* Analyze / Upload button styles (keep id/class intact) */
+        #analyzeBtn {
+            background: linear-gradient(to right, #007bff, #00d4ff);
+            color: white;
+            font-weight: 600;
+            padding: 12px 25px;
+            border-radius: 8px;
+            border: none;
+            transition: transform .3s ease, box-shadow .3s ease, opacity .2s ease;
+            cursor: pointer;
+            display: none;
+        }
+        #analyzeBtn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0, 122, 255, 0.3);
+        }
+
+        /* Drag-and-drop visual zone (non-functional visual only to preserve existing JS) */
+        .drop-zone {
+            margin-top: 22px;
+            padding: 30px 22px;
+            border-radius: 12px;
+            border: 2px dashed rgba(50,70,90,0.12);
+            background: rgba(255,255,255,0.6);
+            color: #264656;
+            font-size: 15px;
+            box-shadow: 0 8px 22px rgba(20,40,80,0.04);
+        }
+
+        .supported { margin-top:10px; font-size:12px; color:#55656f; }
+
+        @media (max-width:520px){ .upload-box { padding: 28px; border-radius:14px; max-width: 92%; } }
+    </style>
 </head>
 <body>
 
@@ -27,16 +110,29 @@
     <!-- MAIN CONTENT -->
     <section class="upload-section">
         <div class="upload-box">
+            <span class="upload-icon">🔬</span>
             <h2>Upload Microscopic Image</h2>
             <p>Upload your water sample image to analyze organisms and water quality.</p>
 
-            <input type="file" id="imageInput" accept="image/*">
-            <br><br>
+            <!-- keep original file input and IDs untouched; wrap visually in styled button -->
+            <div class="file-chooser">
+                <label class="choose-btn">Choose File
+                    <input type="file" id="imageInput" accept="image/*">
+                </label>
+            </div>
 
             <img id="previewImage" style="max-width: 400px; display:none; border-radius: 10px;">
-            <br><br>
 
-            <button id="analyzeBtn" style="display:none;" class="btn primary">Analyze</button>
+            <div style="margin-top:16px;">
+                <button id="analyzeBtn" class="btn primary">Analyze</button>
+            </div>
+
+            <!-- Visual drag-and-drop zone (decorative only - does not modify JS behavior) -->
+            <div class="drop-zone" aria-hidden="true">
+                Drag &amp; drop an image here (or use the file chooser above)
+            </div>
+
+            <div class="supported">Supported formats: JPG, PNG, TIFF</div>
         </div>
     </section>
 
