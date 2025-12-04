@@ -566,3 +566,85 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 })();
+
+// --- Advanced Analytics Charts Loader ---
+async function loadAnalyticsCharts() {
+    try {
+        const response = await fetch("http://127.0.0.1:8000/analytics-data");
+        const data = await response.json();
+
+        // Bar Chart Data - Organism Counts
+        const organisms = Object.keys(data.organism_counts || {});
+        const counts = Object.values(data.organism_counts || {});
+
+        if (organisms.length > 0 && document.getElementById("speciesBarChart")) {
+            new Chart(document.getElementById("speciesBarChart"), {
+                type: "bar",
+                data: {
+                    labels: organisms,
+                    datasets: [{
+                        label: "Detected Count",
+                        data: counts,
+                        backgroundColor: "#0b6bd6"
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true
+                }
+            });
+        }
+
+        // Pie Chart Data - Safety Status
+        if (document.getElementById("safetyPieChart")) {
+            new Chart(document.getElementById("safetyPieChart"), {
+                type: "pie",
+                data: {
+                    labels: ["Safe", "Warning", "Dangerous"],
+                    datasets: [{
+                        data: [
+                            data.safety?.safe || 0,
+                            data.safety?.warning || 0,
+                            data.safety?.dangerous || 0
+                        ],
+                        backgroundColor: ["#10b981", "#f59e0b", "#ef4444"]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true
+                }
+            });
+        }
+
+        // Line Chart - Detection Trend
+        if (document.getElementById("trendLineChart")) {
+            new Chart(document.getElementById("trendLineChart"), {
+                type: "line",
+                data: {
+                    labels: data.trend?.dates || [],
+                    datasets: [{
+                        label: "Detections",
+                        data: data.trend?.counts || [],
+                        borderColor: "#0b6bd6",
+                        backgroundColor: "rgba(11, 107, 214, 0.1)",
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true
+                }
+            });
+        }
+
+    } catch (error) {
+        console.error("Error loading analytics charts:", error);
+    }
+}
+
+// Load charts when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    loadAnalyticsCharts();
+});
