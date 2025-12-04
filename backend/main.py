@@ -10,13 +10,11 @@ from routes.history_route import router as history_router
 from routes.stats_route import router as stats_router
 from routes.status_route import router as status_router
 from routes.stats_api import router as stats_api_router
-from services.model_loader import initialize_model, MODEL
-from services.yolo_analyzer import initialize_model as initialize_yolo
+from services.yolo_pipeline import YoloPipeline
 from fastapi.middleware.cors import CORSMiddleware
 from config import STATIC_DIR
 # ---- AquaSafe AI (Added Feature) ----
 from fastapi import UploadFile, File
-from ai_analyzer import get_ai_analyzer
 import numpy as np
 import cv2
 
@@ -34,17 +32,15 @@ app.add_middleware(
 # startup: initialize model
 @app.on_event("startup")
 def startup_event():
-    # initialize legacy model loader (if used elsewhere)
+    # Initialize the unified YOLO pipeline once and attach to app.state
     try:
-        initialize_model()
-    except Exception:
-        pass
-    # initialize the YOLO analyzer used by /analyze-image
-    try:
-        initialize_yolo()
+        app.state.yolo = YoloPipeline()
+        print("✅ YoloPipeline initialized and attached to app.state.yolo")
     except Exception as e:
-        # Log but don't crash startup — endpoint will return error if model missing
-        print('YOLO analyzer initialize failed:', e)
+        # Log but don't crash startup — endpoints will return error if pipeline missing
+        app.state.yolo = None
+        print('⚠️  YoloPipeline initialize failed:', e)
+
     # ensure static dir exists
     os.makedirs(STATIC_DIR, exist_ok=True)
     os.makedirs("uploaded_images", exist_ok=True)
@@ -91,23 +87,26 @@ app.include_router(admin_router, prefix="")
 @app.post("/ai/analyze")
 async def ai_analyze(image: UploadFile = File(...)):
     """
-    AI-powered water quality analysis using YOLO detection.
-    Accepts an image and returns species counts, safety status, and generated reports.
+    AI-powered water quality analysis using the unified YoloPipeline.
+    Accepts an image and returns detections.
     """
     try:
         # Read image from upload
         contents = await image.read()
         nparr = np.frombuffer(contents, np.uint8)
         img_array = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        
+
         if img_array is None:
             return {"error": "Invalid image format", "status": "ERROR"}
-        
-        # Run analysis
-        analyzer = get_ai_analyzer()
-        result = analyzer.analyze_image(img_array)
-        
-        return result
+
+        yolo = getattr(app.state, 'yolo', None)
+        if yolo is None:
+            return {"error": "Yolo pipeline not initialized", "status": "ERROR"}
+
+        # Run unified pipeline
+        res = yolo.run(image_array=img_array)
+
+        return {"status": "OK", "detections": res.get('detections', [])}
     except Exception as e:
         return {"error": str(e), "status": "ERROR"}
 

@@ -1,11 +1,11 @@
 """
 live_detect.py
-Live model detection endpoints for snapshot → analyze → report workflow
-YOLO detection and classification models with full error handling and logging.
+Live model detection endpoints for snapshot → analyze → report workflow.
+Uses unified YoloPipeline from app.state.yolo (initialized in main.py).
 """
 
-from fastapi import APIRouter, UploadFile, File, HTTPException
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, UploadFile, File, HTTPException, Request
+from fastapi.responses import FileResponse, StreamingResponse
 from datetime import datetime
 import os
 import cv2
@@ -30,78 +30,6 @@ ANNOTATED_DIR = "backend/annotated"
 # Ensure directories exist
 Path(SNAPSHOT_DIR).mkdir(parents=True, exist_ok=True)
 Path(ANNOTATED_DIR).mkdir(parents=True, exist_ok=True)
-
-# ============================================
-# MODEL LOADING WITH LOGGING
-# ============================================
-detection_model = None
-classification_model = None
-
-def load_models():
-    """Load both detection and classification YOLO models with detailed logging."""
-    global detection_model, classification_model
-    
-    try:
-        from ultralytics import YOLO
-        print("\n" + "="*60)
-        print("🔄 YOLO MODEL LOADING INITIATED")
-        print("="*60)
-        
-        # ========== DETECTION MODEL (best.pt) ==========
-        det_path = os.path.abspath(os.path.join('backend', 'models', 'best.pt'))
-        print(f"\n📍 Looking for detection model at: {det_path}")
-        
-        if os.path.exists(det_path):
-            file_size = os.path.getsize(det_path)
-            print(f"✅ Detection model file found | Size: {file_size:,} bytes")
-            try:
-                detection_model = YOLO(det_path)
-                print(f"✅ Detection model (best.pt) loaded successfully")
-                print(f"   - Model type: {type(detection_model)}")
-                print(f"   - Model names: {getattr(detection_model, 'names', 'N/A')}")
-            except Exception as e:
-                print(f"❌ Failed to load detection model: {e}")
-                detection_model = None
-        else:
-            print(f"❌ Detection model NOT FOUND at: {det_path}")
-        
-        # ========== CLASSIFICATION MODEL (bestc.pt) ==========
-        cls_path = os.path.abspath(os.path.join('backend', 'models', 'bestc.pt'))
-        print(f"\n📍 Looking for classification model at: {cls_path}")
-        
-        if os.path.exists(cls_path):
-            file_size = os.path.getsize(cls_path)
-            print(f"✅ Classification model file found | Size: {file_size:,} bytes")
-            try:
-                classification_model = YOLO(cls_path)
-                print(f"✅ Classification model (bestc.pt) loaded successfully")
-                print(f"   - Model type: {type(classification_model)}")
-                print(f"   - Model names: {getattr(classification_model, 'names', 'N/A')}")
-            except Exception as e:
-                print(f"❌ Failed to load classification model: {e}")
-                classification_model = None
-        else:
-            print(f"⚠️  Classification model NOT FOUND at: {cls_path}")
-        
-        print("\n" + "="*60)
-        print("MODEL LOADING SUMMARY")
-        print("="*60)
-        print(f"Detection Model (best.pt):       {'✅ LOADED' if detection_model else '❌ FAILED'}")
-        print(f"Classification Model (bestc.pt): {'✅ LOADED' if classification_model else '⚠️  NOT AVAILABLE'}")
-        print("="*60 + "\n")
-        
-    except ImportError:
-        print("❌ ultralytics package not installed. Install with: pip install ultralytics")
-        detection_model = None
-        classification_model = None
-    except Exception as e:
-        print(f"❌ Unexpected error during model loading: {e}")
-        detection_model = None
-        classification_model = None
-
-# Load models on module import
-load_models()
-
 
 # ============================================
 # 1️⃣ UPLOAD SNAPSHOT
@@ -148,223 +76,138 @@ async def upload_snapshot(image: UploadFile = File(...)):
 
 
 # ============================================
-# 2️⃣ ANALYZE SNAPSHOT WITH YOLO
+# 2️⃣ ANALYZE SNAPSHOT WITH YOLO (UNIFIED PIPELINE)
 # ============================================
 @router.get("/api/analyze/{snap_id}/")
-async def analyze_snapshot(snap_id: int):
+async def analyze_snapshot(snap_id: int, request: Request):
     """
-    Run YOLO models on uploaded snapshot.
-    Returns: species, count, safety verdict, bounding boxes, confidence, annotated image.
+    Run YOLO models on uploaded snapshot via the unified YoloPipeline.
+    Pipeline is pre-initialized and attached to app.state.yolo in main.py.
+    Returns JSON with species, detections, boxes, and per-class statistics.
     """
     try:
         print(f"\n🔍 Analysis started for snap_id={snap_id}")
-        
+
         if snap_id not in snapshots_store:
             print(f"❌ Snapshot not found: snap_id={snap_id}")
             raise HTTPException(status_code=404, detail="Snapshot not found")
-        
+
         snap_data = snapshots_store[snap_id]
         img_path = snap_data["path"]
-        
+
         if not os.path.exists(img_path):
             print(f"❌ Snapshot file not found: {img_path}")
             raise HTTPException(status_code=404, detail="Snapshot file not found")
-        
-        # Read image
-        img = cv2.imread(img_path)
-        if img is None:
-            print(f"❌ Invalid image format: {img_path}")
-            raise HTTPException(status_code=400, detail="Invalid image format")
-        
-        print(f"✅ Image loaded: {img.shape}")
-        
-        # ========== CHECK MODEL AVAILABILITY ==========
-        if detection_model is None:
-            print(f"❌ Detection model not available")
-            return {
-                "id": snap_id,
-                "species": "No Model",
-                "meaning": "YOLO detection model failed to load. Check backend logs.",
-                "count": 0,
-                "safe": True,
-                "confidence": 0.0,
-                "annotated_image": f"/snapshots/{snap_id}.jpg",
-                "boxes": [],
-                "per_class_stats": []
-            }
-        
-        # ========== RUN DETECTION ==========
+
+        # Access the unified pipeline from app state
+        yolo = getattr(request.app.state, 'yolo', None)
+        if yolo is None:
+            print("❌ Yolo pipeline not initialized on app.state")
+            raise HTTPException(status_code=500, detail="Yolo pipeline not initialized on server")
+
+        # Run unified pipeline (detection + per-crop classification)
         try:
-            print(f"🤖 Running detection inference...")
-            results = detection_model(img_path, conf=0.35, iou=0.45)
-            detections = results[0]
-            print(f"✅ Detection completed")
-            
-            boxes = []
-            confidences = []
-            class_idxs = []
-
-            # Extract detections
-            if hasattr(detections, 'boxes') and detections.boxes is not None:
-                try:
-                    xyxy = detections.boxes.xyxy.cpu().numpy()
-                    cls_arr = detections.boxes.cls.cpu().numpy()
-                    conf_arr = detections.boxes.conf.cpu().numpy()
-                    
-                    for b, c, cf in zip(xyxy, cls_arr, conf_arr):
-                        boxes.append([int(b[0]), int(b[1]), int(b[2]), int(b[3])])
-                        class_idxs.append(int(c))
-                        confidences.append(float(cf))
-                except Exception as e:
-                    print(f"⚠️  Error parsing detection boxes: {e}")
-
-            count = len(boxes)
-            print(f"📊 Detections found: {count}")
-            
-            # Get detection model class names
-            det_names = getattr(detection_model, 'names', {}) or {}
-            print(f"🏷️  Detection classes available: {det_names}")
-            
-            # ========== OPTIONAL: RUN CLASSIFICATION ON EACH DETECTION ==========
-            boxes_info = []
-            for i, box in enumerate(boxes):
-                x1, y1, x2, y2 = box
-                det_conf = confidences[i] if i < len(confidences) else 0.0
-                det_cls_idx = class_idxs[i] if i < len(class_idxs) else None
-                det_cls_name = det_names.get(det_cls_idx, f"class_{det_cls_idx}") if det_cls_idx is not None else "unknown"
-                
-                final_name = det_cls_name
-                final_conf = det_conf
-                
-                # Try classification model if available
-                if classification_model is not None:
-                    try:
-                        crop = img[y1:y2, x1:x2]
-                        if crop is not None and crop.size > 0:
-                            pil_crop = Image.fromarray(cv2.cvtColor(crop, cv2.COLOR_BGR2RGB))
-                            cls_res = classification_model(pil_crop)
-                            r0 = cls_res[0]
-                            probs = getattr(r0, 'probs', None)
-                            if probs is not None:
-                                try:
-                                    top_idx = int(np.argmax(probs.cpu().numpy())) if hasattr(probs, 'cpu') else int(np.argmax(probs))
-                                    top_conf = float(np.max(probs.cpu().numpy())) if hasattr(probs, 'cpu') else float(np.max(probs))
-                                    cls_names = getattr(classification_model, 'names', {}) or {}
-                                    final_name = cls_names.get(top_idx, final_name)
-                                    final_conf = top_conf
-                                except Exception:
-                                    pass
-                    except Exception as e:
-                        print(f"⚠️  Classification failed for box {i}: {e}")
-                
-                boxes_info.append({
-                    'box': [x1, y1, x2, y2],
-                    'confidence': final_conf,
-                    'class': final_name
-                })
-                print(f"   Box {i}: {final_name} (conf={final_conf:.3f})")
-            
-            # ========== AGGREGATE PER-CLASS STATISTICS ==========
-            counts = {}
-            conf_sums = {}
-            for b in boxes_info:
-                cname = b['class']
-                counts[cname] = counts.get(cname, 0) + 1
-                conf_sums[cname] = conf_sums.get(cname, 0.0) + b.get('confidence', 0.0)
-
-            per_class = []
-            for cname, cnt in counts.items():
-                avg_conf = (conf_sums.get(cname, 0.0) / cnt) if cnt > 0 else 0.0
-                percentage = round((cnt / count * 100), 1) if count > 0 else 0.0
-                
-                # Safety mapping
-                unsafe_classes = ["rotifer"]
-                caution_classes = ["algae"]
-                safety = 'Unsafe' if cname.lower() in unsafe_classes else ('Caution' if cname.lower() in caution_classes else 'Safe')
-                
-                per_class.append({
-                    'class': cname,
-                    'count': cnt,
-                    'percentage': percentage,
-                    'avg_confidence': round(avg_conf, 3),
-                    'safety': safety
-                })
-            
-            per_class_sorted = sorted(per_class, key=lambda x: (x['count'], x['avg_confidence']), reverse=True)
-            
-            # ========== DETERMINE PRIMARY SPECIES & SAFETY ==========
-            if count == 0:
-                species_name = "None Detected"
-                meaning = "No microorganisms detected in the image."
-                safe = True
-                overall_confidence = 0.0
-            else:
-                primary = per_class_sorted[0]
-                species_name = primary['class']
-                overall_confidence = primary['avg_confidence']
-                
-                if primary['safety'] == 'Unsafe':
-                    meaning = f"⚠️ {species_name} is a high-risk organism. Immediate action recommended."
-                    safe = False
-                elif primary['safety'] == 'Caution':
-                    meaning = f"⚠️ {species_name} detected. Review recommended."
-                    safe = True
-                else:
-                    meaning = f"✅ {species_name} detected. Safe to use."
-                    safe = True
-            
-            print(f"📋 Results: species={species_name}, count={count}, safe={safe}, confidence={overall_confidence:.3f}")
-            
-            # ========== DRAW BOUNDING BOXES ==========
-            img_annotated = img.copy()
-            for b in boxes_info:
-                x1, y1, x2, y2 = b['box']
-                conf = b.get('confidence', 0.0)
-                cls_name = b.get('class', 'unknown')
-                
-                # Color: green for safe, red for unsafe
-                unsafe_classes = ["rotifer"]
-                color = (0, 0, 255) if cls_name.lower() in unsafe_classes else (0, 255, 0)
-                
-                cv2.rectangle(img_annotated, (x1, y1), (x2, y2), color, 2)
-                label = f"{cls_name} {conf:.2f}"
-                cv2.putText(img_annotated, label, (x1, max(y1 - 6, 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
-            
-            # ========== SAVE ANNOTATED IMAGE ==========
-            annotated_filename = f"{snap_id}_annotated.jpg"
-            annotated_path = os.path.join(ANNOTATED_DIR, annotated_filename)
-            cv2.imwrite(annotated_path, img_annotated)
-            print(f"💾 Annotated image saved: {annotated_path}")
-            
-            # ========== UPDATE SNAPSHOT STORE ==========
-            snap_data["analyzed"] = True
-            snap_data["species"] = species_name
-            snap_data["meaning"] = meaning
-            snap_data["count"] = count
-            snap_data["safe"] = safe
-            snap_data["confidence"] = overall_confidence
-            snap_data["annotated_image"] = annotated_path
-            snap_data["boxes"] = boxes_info
-            snap_data["per_class_stats"] = per_class_sorted
-            
-            print(f"✅ Analysis completed successfully\n")
-            
-            return {
-                "id": snap_id,
-                "species": species_name,
-                "meaning": meaning,
-                "count": count,
-                "safe": safe,
-                "confidence": overall_confidence,
-                "annotated_image": f"/snapshots/annotated/{annotated_filename}",
-                "boxes": boxes_info,
-                "per_class_stats": per_class_sorted
-            }
-        
+            res = yolo.run(image_path=img_path)
         except Exception as e:
-            print(f"❌ Inference error: {e}")
-            raise HTTPException(status_code=500, detail=f"Inference failed: {str(e)}")
-    
+            print(f"❌ Pipeline run failed: {e}")
+            raise HTTPException(status_code=500, detail=f"Pipeline run failed: {e}")
+
+        detections = res.get('detections', [])
+        annotated_img = res.get('annotated', None)
+
+        # Convert detections to boxes_info format
+        boxes_info = []
+        for d in detections:
+            bbox = d.get('bbox', [])
+            cname = d.get('class_name', 'unknown')
+            confv = float(d.get('confidence', 0.0))
+            boxes_info.append({'box': bbox, 'confidence': confv, 'class': cname})
+
+        count = len(boxes_info)
+
+        # Aggregate per-class stats
+        counts = {}
+        conf_sums = {}
+        for b in boxes_info:
+            cname = b['class']
+            counts[cname] = counts.get(cname, 0) + 1
+            conf_sums[cname] = conf_sums.get(cname, 0.0) + b.get('confidence', 0.0)
+
+        per_class = []
+        for cname, cnt in counts.items():
+            avg_conf = (conf_sums.get(cname, 0.0) / cnt) if cnt > 0 else 0.0
+            percentage = round((cnt / count * 100), 1) if count > 0 else 0.0
+            unsafe_classes = ["rotifer"]
+            caution_classes = ["algae"]
+            safety = 'Unsafe' if cname.lower() in unsafe_classes else ('Caution' if cname.lower() in caution_classes else 'Safe')
+            per_class.append({
+                'class': cname,
+                'count': cnt,
+                'percentage': percentage,
+                'avg_confidence': round(avg_conf, 3),
+                'safety': safety
+            })
+
+        per_class_sorted = sorted(per_class, key=lambda x: (x['count'], x['avg_confidence']), reverse=True)
+
+        # Determine primary species and safety status
+        if count == 0:
+            species_name = "None Detected"
+            meaning = "No microorganisms detected in the image."
+            safe = True
+            overall_confidence = 0.0
+        else:
+            primary = per_class_sorted[0]
+            species_name = primary['class']
+            overall_confidence = primary['avg_confidence']
+            if primary['safety'] == 'Unsafe':
+                meaning = f"⚠️ {species_name} is a high-risk organism. Immediate action recommended."
+                safe = False
+            elif primary['safety'] == 'Caution':
+                meaning = f"⚠️ {species_name} detected. Review recommended."
+                safe = True
+            else:
+                meaning = f"✅ {species_name} detected. Safe to use."
+                safe = True
+
+        # Save annotated image if provided by pipeline
+        annotated_filename = f"{snap_id}_annotated.jpg"
+        annotated_path = os.path.join(ANNOTATED_DIR, annotated_filename)
+        if annotated_img is not None:
+            try:
+                cv2.imwrite(annotated_path, annotated_img)
+                print(f"💾 Annotated image saved: {annotated_path}")
+            except Exception as e:
+                print(f"⚠️ Failed to save annotated image: {e}")
+                annotated_path = None
+        else:
+            annotated_path = None
+
+        # Update snapshot store with analysis results
+        snap_data["analyzed"] = True
+        snap_data["species"] = species_name
+        snap_data["meaning"] = meaning
+        snap_data["count"] = count
+        snap_data["safe"] = safe
+        snap_data["confidence"] = overall_confidence
+        snap_data["annotated_image"] = annotated_path
+        snap_data["boxes"] = boxes_info
+        snap_data["per_class_stats"] = per_class_sorted
+
+        print(f"✅ Analysis completed: {count} detections found, primary species: {species_name}\n")
+
+        return {
+            "id": snap_id,
+            "species": species_name,
+            "meaning": meaning,
+            "count": count,
+            "safe": safe,
+            "confidence": overall_confidence,
+            "annotated_image": f"/snapshots/annotated/{annotated_filename}" if annotated_path else None,
+            "boxes": boxes_info,
+            "per_class_stats": per_class_sorted
+        }
+
     except HTTPException:
         raise
     except Exception as e:
@@ -426,7 +269,7 @@ async def download_report(snap_id: int):
             p.drawString(40, y_pos, line)
             y_pos -= 18
         
-        # Per-class statistics
+        # Per-class statistics table
         per_class = snap_data.get('per_class_stats', [])
         if per_class:
             p.setFont("Helvetica-Bold", 12)
@@ -486,11 +329,11 @@ async def download_report(snap_id: int):
         
         print(f"✅ Report generated successfully | Size: {len(pdf_bytes):,} bytes\n")
         
-        # Return PDF as download
-        return FileResponse(
-            io.BytesIO(pdf_bytes),
+        # Return PDF as download using StreamingResponse
+        return StreamingResponse(
+            iter([pdf_bytes]),
             media_type="application/pdf",
-            filename=f"aquasafe_report_{snap_id}.pdf"
+            headers={"Content-Disposition": f"attachment; filename=aquasafe_report_{snap_id}.pdf"}
         )
     
     except HTTPException:
