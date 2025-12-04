@@ -6,6 +6,33 @@
     <title>Analytics</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="assets/css/analytics.css">
+    <style>
+        /* Upload Sample Button Styling */
+        .upload-sample-btn {
+            display: inline-block;
+            padding: 14px 32px;
+            margin: 20px 0;
+            background: linear-gradient(135deg, #0b6bd6 0%, #00c2ff 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 20px rgba(11, 107, 214, 0.2);
+            border: none;
+            cursor: pointer;
+        }
+
+        .upload-sample-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 14px 36px rgba(11, 107, 214, 0.35);
+        }
+
+        .upload-sample-btn:active {
+            transform: translateY(-1px);
+        }
+    </style>
 </head>
 <body>
 
@@ -106,16 +133,16 @@
     </header>
 
     <!-- PAGE CONTENT -->
-    <section class="content">
-        <h2>Analytics & Statistics</h2>
-        <p>View statistics and trends over time.</p>
+    <section class="content analytics-fullscreen">
+        <h2 style="text-align:center;font-weight:700;color:#1a1a1a;font-size:28px;margin-top:18px;margin-bottom:8px;">Analytics & Statistics</h2>
+        <p style="text-align:center;font-weight:700;color:#4d4d4d;font-size:16px;margin-top:0;margin-bottom:22px;">View statistics and trends over time.</p>
 
         <!-- Empty State Card (shown when no analysis yet) -->
         <div id="emptyStateCard" class="empty-state-card">
             <div class="empty-state-icon">🔬</div>
             <h3 class="empty-state-title">No Water Sample Analyzed</h3>
             <p class="empty-state-subtitle">To get started, upload a microscopic water image to generate a full microbiological analysis.</p>
-            <div class="empty-state-illustration"></div>
+            <a href="upload.html" class="upload-sample-btn">Upload Water Sample</a>
             <p class="empty-state-cta">⬆ Upload a water sample to begin analysis</p>
         </div>
 
