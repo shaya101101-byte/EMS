@@ -59,6 +59,8 @@
           <button id="startFeedBtn" class="feed-btn start">Start Feed</button>
           <button id="stopFeedBtn" class="feed-btn stop" disabled>Stop Feed</button>
           <button id="captureSnapshotBtn" class="feed-btn capture-btn" disabled>Capture Snapshot</button>
+          <button id="analyzeBtn" class="feed-btn" style="display:none; background:#28a745">Analyze</button>
+          <button id="downloadReportBtn" class="feed-btn" style="display:none; background:#17a2b8">Download Report</button>
         </div>
       </div>
 
@@ -67,6 +69,9 @@
         <div id="fpsValue" class="value">0 FPS</div>
       </div>
     </div>
+
+    <!-- Analysis Result Display -->
+    <div id="analysisResult" style="margin-top:20px; display:none; background:#f9f9f9; padding:16px; border-radius:8px; border-left:4px solid #1f6feb;"></div>
 
     <!-- Legacy sensor cards (preserved) -->
     <div class="controls" style="display:none;">
@@ -95,5 +100,116 @@
   <link rel="stylesheet" href="css/live_dashboard.css">
   <script src="js/live_dashboard_feed.js"></script>
   <div id="snapshotToast" class="snapshot-toast" aria-live="polite" hidden></div>
+
+  <!-- LIVE MODEL DETECTION SCRIPT -->
+  <script>
+    let lastUploadedImageId = null;
+    const video = document.getElementById("liveVideoFeed");
+    const analyzeBtn = document.getElementById("analyzeBtn");
+    const downloadReportBtn = document.getElementById("downloadReportBtn");
+
+    // ========================================
+    // CAPTURE SNAPSHOT & UPLOAD
+    // ========================================
+    function captureSnapshot() {
+      const canvas = document.createElement("canvas");
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        alert("Canvas context failed");
+        return;
+      }
+      ctx.drawImage(video, 0, 0);
+
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          alert("Canvas blob conversion failed");
+          return;
+        }
+        const formData = new FormData();
+        formData.append("image", blob, "snapshot.jpg");
+
+        fetch("http://127.0.0.1:8000/api/upload-snapshot/", {
+          method: "POST",
+          body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (data.id) {
+            lastUploadedImageId = data.id;
+            analyzeBtn.style.display = "inline-block";
+            alert("✅ Snapshot Uploaded! Click 'Analyze' to run YOLO detection.");
+          } else {
+            alert("❌ Upload Failed: " + (data.error || "Unknown error"));
+          }
+        })
+        .catch(err => {
+          console.error("Upload error:", err);
+          alert("❌ Upload failed: " + err.message);
+        });
+      }, "image/jpeg", 0.95);
+    }
+
+    // Override the capture snapshot button
+    document.getElementById("captureSnapshotBtn").addEventListener("click", captureSnapshot);
+
+    // ========================================
+    // ANALYZE SNAPSHOT (YOLO MODEL)
+    // ========================================
+    analyzeBtn.addEventListener("click", () => {
+      if (!lastUploadedImageId) {
+        alert("No snapshot uploaded yet");
+        return;
+      }
+
+      analyzeBtn.disabled = true;
+      analyzeBtn.textContent = "Analyzing...";
+
+      fetch(`http://127.0.0.1:8000/api/analyze/${lastUploadedImageId}/`)
+        .then(res => res.json())
+        .then(data => {
+          const safeColor = data.safe ? "#28a745" : "#dc3545";
+          const safeText = data.safe ? "✅ Safe" : "⚠️ Unsafe";
+
+          let html = `
+            <h3 style="margin-top:0; color:#1f6feb">📊 Analysis Result</h3>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+              <div>
+                <p><b>🦠 Species:</b> ${data.species || "Unknown"}</p>
+                <p><b>📝 Description:</b> ${data.meaning || "No description"}</p>
+                <p><b>🔢 Count:</b> ${data.count || 0}</p>
+                <p><b>Status:</b> <span style="color:${safeColor}; font-weight:600; font-size:16px">${safeText}</span></p>
+              </div>
+              <div>
+                ${data.annotated_image ? `<img src="${data.annotated_image}" width="300" style="border-radius:8px; border:2px solid #ddd;">` : "<p>No annotated image</p>"}
+              </div>
+            </div>
+          `;
+          document.getElementById("analysisResult").innerHTML = html;
+          document.getElementById("analysisResult").style.display = "block";
+          downloadReportBtn.style.display = "inline-block";
+        })
+        .catch(err => {
+          console.error("Analysis error:", err);
+          alert("❌ Analysis failed: " + err.message);
+        })
+        .finally(() => {
+          analyzeBtn.disabled = false;
+          analyzeBtn.textContent = "Analyze";
+        });
+    });
+
+    // ========================================
+    // PDF DOWNLOAD
+    // ========================================
+    downloadReportBtn.addEventListener("click", () => {
+      if (!lastUploadedImageId) {
+        alert("No analysis to download");
+        return;
+      }
+      window.open(`http://127.0.0.1:8000/api/download-report/${lastUploadedImageId}/`, "_blank");
+    });
+  </script>
 </body>
 </html>

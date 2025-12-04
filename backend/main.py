@@ -56,10 +56,13 @@ def startup_event():
 os.makedirs(STATIC_DIR, exist_ok=True)
 os.makedirs("static/results", exist_ok=True)
 os.makedirs("uploaded_images", exist_ok=True)
+os.makedirs("backend/snapshots", exist_ok=True)
+os.makedirs("backend/annotated", exist_ok=True)
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 app.mount("/uploaded_images", StaticFiles(directory="uploaded_images"), name="uploaded_images")
 app.mount("/uploads", StaticFiles(directory="uploaded_images"), name="uploads")
+app.mount("/snapshots", StaticFiles(directory="backend"), name="snapshots")
 # ---- AquaSafe AI (Added Feature) ----
 # Mount outputs so generated charts, images and PDFs are available at /outputs
 os.makedirs("outputs", exist_ok=True)
@@ -77,6 +80,8 @@ from routes.analytics_data import router as analytics_data_router
 app.include_router(analytics_data_router, prefix="")
 from routes.analytics_report_pdf import router as analytics_report_pdf_router
 app.include_router(analytics_report_pdf_router, prefix="")
+from routes.live_detect import router as live_detect_router
+app.include_router(live_detect_router, prefix="")
 
 # ---- Admin Dashboard (Added Feature) ----
 from routes.admin import router as admin_router
