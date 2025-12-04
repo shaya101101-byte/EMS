@@ -17,7 +17,6 @@ from reportlab.lib.utils import ImageReader
 from reportlab.lib.pagesizes import letter
 import numpy as np
 from PIL import Image
-from backend.ai_analyzer import get_ai_analyzer
 
 router = APIRouter()
 
@@ -194,30 +193,6 @@ async def analyze_snapshot(snap_id: int, request: Request):
         snap_data["annotated_image"] = annotated_path
         snap_data["boxes"] = boxes_info
         snap_data["per_class_stats"] = per_class_sorted
-
-        # Persist analysis to history.json via AquaSafeAI helper so the
-        # live dashboard analysis appears in the history page.
-        try:
-            analyzer = get_ai_analyzer()
-            percentages = {}
-            if count > 0:
-                for k, v in counts.items():
-                    percentages[k] = round((v / count * 100), 1)
-
-            history_entry = {
-                "status": "UNSAFE" if not safe else "SAFE",
-                "counts": counts,
-                "percentages": percentages,
-                "annotated_image": f"snapshots/annotated/{annotated_filename}" if annotated_path else None,
-                "pie_chart": "",
-                "bar_chart": "",
-                "pdf": None,
-                "timestamp": datetime.utcnow().isoformat()
-            }
-            analyzer.save_to_history(history_entry)
-            print(f"💾 Analysis saved to history.json for snap_id={snap_id}")
-        except Exception as e:
-            print(f"⚠️ Failed to save analysis to history: {e}")
 
         print(f"✅ Analysis completed: {count} detections found, primary species: {species_name}\n")
 
