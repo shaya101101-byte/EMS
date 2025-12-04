@@ -288,3 +288,69 @@ body {
 .navbar * {
     background: linear-gradient(135deg, #e6d9f0 0%, #d9cceb 100%) !important;
 }
+
+/* Ensure header stays fixed and content does not scroll under it */
+header, .navbar, .top-nav {
+    position: sticky;
+    top: 0;
+    z-index: 9999;       /* keep header always above content */
+    background: inherit; /* keep existing color */
+}
+
+/* Add spacing so the page content starts below the header */
+body {
+    padding-top: 90px;   /* adjust based on existing header height */
+}
+
+/* Upload page visual enhancements requested by user */
+.upload-icon {
+    width: 80px;
+    height: 80px;
+    margin-bottom: 15px;
+}
+
+.upload-title {
+    font-size: 32px;
+    font-weight: 700;
+    color: #1b3a57;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+}
+
+.upload-description {
+    font-size: 16px;
+    color: #455a64;
+    margin-bottom: 25px;
+}
+
+.upload-card {
+    padding: 50px 40px;
+    border-radius: 18px;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.08);
+}
+
+.drop-zone {
+    font-size: 16px;
+    padding: 25px;
+    border-radius: 14px;
+}
+
+.upload-btn {
+    padding: 12px 28px;
+    font-size: 16px;
+    border-radius: 10px;
+    font-weight: 600;
+}
+
+.upload-card, .upload-btn, .drop-zone {
+    transition: all 0.25s ease-in-out;
+}
+
+.drop-zone:hover {
+    transform: scale(1.02);
+    border-color: #3b82f6;
+}
+
+.upload-btn:hover {
+    transform: scale(1.05);
+}
