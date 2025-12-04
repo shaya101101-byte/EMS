@@ -29,6 +29,9 @@
         stopBtn.addEventListener('click', stopFeed);
         if (captureBtn) {
             captureBtn.addEventListener('click', captureSnapshot);
+            // If there's a static fallback image on-page, enable capture immediately
+            const imgFallback = document.getElementById('staticImage');
+            if (imgFallback) captureBtn.disabled = false;
         }
         sourceToggle.addEventListener('change', handleSourceChange);
     }
@@ -62,9 +65,9 @@
             // Start FPS counter
             startFpsCounter();
 
-            // Enable capture button if present
-            const captureBtn = document.getElementById('captureSnapshotBtn');
-            if (captureBtn) captureBtn.disabled = false;
+                // Enable capture button if present
+                const captureBtn = document.getElementById('captureSnapshotBtn');
+                if (captureBtn) captureBtn.disabled = false;
 
         } catch (error) {
             console.error('Error accessing camera:', error);
@@ -105,18 +108,28 @@
      * Posts to '/api/upload_snapshot' as multipart/form-data with field 'file'.
      */
     function captureSnapshot() {
-        if (!isStreaming || !videoElement) return showSnapshotToast('No active video to capture', false);
+        // Allow capture from video stream OR a fallback static image element with id 'staticImage'
+        let sourceIsVideo = isStreaming && videoElement && videoElement.readyState >= 2;
+        const imgFallback = document.getElementById('staticImage');
 
-        const w = videoElement.videoWidth || 1280;
-        const h = videoElement.videoHeight || 720;
+        if (!sourceIsVideo && !imgFallback) {
+            return showSnapshotToast('No active video or fallback image to capture', false);
+        }
+
+        const w = (sourceIsVideo ? (videoElement.videoWidth || 1280) : (imgFallback.naturalWidth || 1280));
+        const h = (sourceIsVideo ? (videoElement.videoHeight || 720) : (imgFallback.naturalHeight || 720));
         const canvas = document.createElement('canvas');
         canvas.width = w;
         canvas.height = h;
         const ctx = canvas.getContext('2d');
         try {
-            ctx.drawImage(videoElement, 0, 0, w, h);
+            if (sourceIsVideo) {
+                ctx.drawImage(videoElement, 0, 0, w, h);
+            } else {
+                ctx.drawImage(imgFallback, 0, 0, w, h);
+            }
         } catch (err) {
-            console.error('Error drawing video frame:', err);
+            console.error('Error drawing source frame:', err);
             return showSnapshotToast('Capture failed', false);
         }
 
@@ -140,12 +153,19 @@
                 const filename = `snapshot_${ts.getFullYear()}${pad(ts.getMonth()+1)}${pad(ts.getDate())}_${pad(ts.getHours())}${pad(ts.getMinutes())}${pad(ts.getSeconds())}.png`;
 
                 const form = new FormData();
-                form.append('file', blob, filename);
+                // backend expects field name 'image' at endpoint /api/upload-snapshot/
+                form.append('image', blob, filename);
 
                 try {
-                    const resp = await fetch('/api/upload_snapshot', { method: 'POST', body: form });
+                    const resp = await fetch('http://127.0.0.1:8000/api/upload-snapshot/', { method: 'POST', body: form });
                     if (resp.ok) {
-                        showSnapshotToast('Snapshot saved', true);
+                        const data = await resp.json();
+                        // If backend returns id, enable analyze button in global UI
+                        try { window.lastUploadedImageId = data.id; } catch(e){}
+                        // Also trigger any global handlers if present
+                        const analyzeBtn = document.getElementById('analyzeBtn');
+                        if (analyzeBtn) analyzeBtn.style.display = 'inline-block';
+                        showSnapshotToast('Snapshot uploaded', true);
                     } else {
                         const text = await resp.text();
                         console.error('Upload failed', resp.status, text);

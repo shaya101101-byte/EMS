@@ -103,162 +103,68 @@
 
   <!-- LIVE MODEL DETECTION SCRIPT -->
   <script>
-    let lastUploadedImageId = null;
-    const video = document.getElementById("liveVideoFeed");
+    // This script only wires the Analyze and Download buttons to the
+    // backend. Snapshot upload and capture are handled by
+    // `js/live_dashboard_feed.js` which sets `window.lastUploadedImageId`.
+
     const analyzeBtn = document.getElementById("analyzeBtn");
     const downloadReportBtn = document.getElementById("downloadReportBtn");
 
-    // ========================================
-    // CAPTURE SNAPSHOT & UPLOAD
-    // ========================================
-    function captureSnapshot() {
-      // Check if video is playing
-      if (!video.srcObject || video.paused || video.ended) {
-        alert("❌ Video not playing. Click 'Start Feed' first.");
-        return;
-      }
-
-      // Check if video has valid dimensions
-      if (video.videoWidth === 0 || video.videoHeight === 0) {
-        alert("❌ Video not ready. Wait for the feed to load.");
-        return;
-      }
-
-      const canvas = document.createElement("canvas");
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) {
-        alert("❌ Canvas context failed");
-        return;
-      }
-      ctx.drawImage(video, 0, 0);
-
-      canvas.toBlob((blob) => {
-        if (!blob) {
-          alert("❌ Canvas blob conversion failed");
-          return;
-        }
-        const formData = new FormData();
-        formData.append("image", blob, "snapshot.jpg");
-
-        fetch("http://127.0.0.1:8000/api/upload-snapshot/", {
-          method: "POST",
-          body: formData
-        })
-        .then(res => {
-          if (!res.ok) {
-            console.error("Upload response error:", res.status, res.statusText);
-            throw new Error(`Server error: ${res.status}`);
-          }
-          return res.json();
-        })
-        .then(data => {
-          if (data.id) {
-            lastUploadedImageId = data.id;
-            analyzeBtn.style.display = "inline-block";
-            alert("✅ Snapshot Uploaded! Click 'Analyze' to run YOLO detection.");
-          } else {
-            alert("❌ Upload Failed: " + (data.error || data.detail || "Unknown error"));
-          }
-        })
-        .catch(err => {
-          console.error("Upload error:", err);
-          alert("❌ Upload failed: " + err.message);
-        });
-      }, "image/jpeg", 0.95);
+    function renderAnalysis(data) {
+      const safeColor = data.safe ? "#28a745" : "#dc3545";
+      const safeText = data.safe ? "✅ Safe" : "⚠️ Unsafe";
+      const html = `
+        <h3 style="margin-top:0; color:#1f6feb">📊 Analysis Result</h3>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+          <div>
+            <p><b>🦠 Species:</b> ${data.species || "Unknown"}</p>
+            <p><b>📝 Description:</b> ${data.meaning || "No description"}</p>
+            <p><b>🔢 Count:</b> ${data.count || 0} organisms</p>
+            <p><b>📊 Confidence:</b> ${((data.confidence || 0) * 100).toFixed(1)}%</p>
+            <p><b>Status:</b> <span style="color:${safeColor}; font-weight:600; font-size:16px">${safeText}</span></p>
+          </div>
+          <div>
+            ${data.annotated_image ? `<img src="${data.annotated_image}" width="300" style="border-radius:8px; border:2px solid #ddd;">` : "<p>No annotated image</p>"}
+          </div>
+        </div>
+      `;
+      document.getElementById("analysisResult").innerHTML = html;
+      document.getElementById("analysisResult").style.display = "block";
     }
 
-    // Override the capture snapshot button
-    document.getElementById("captureSnapshotBtn").addEventListener("click", captureSnapshot);
-
-    // ========================================
-    // ANALYZE SNAPSHOT (YOLO MODEL)
-    // ========================================
-    analyzeBtn.addEventListener("click", () => {
-      if (!lastUploadedImageId) {
-        alert("❌ No snapshot uploaded yet. Click 'Capture Snapshot' first.");
+    analyzeBtn.addEventListener("click", async () => {
+      const id = window.lastUploadedImageId || null;
+      if (!id) {
+        alert("❌ No snapshot uploaded yet. Capture and upload a snapshot first.");
         return;
       }
 
       analyzeBtn.disabled = true;
       analyzeBtn.textContent = "Analyzing...";
 
-      fetch(`http://127.0.0.1:8000/api/analyze/${lastUploadedImageId}/`)
-        .then(res => {
-          if (!res.ok) {
-            console.error("Analysis response error:", res.status, res.statusText);
-            throw new Error(`Server error: ${res.status}`);
-          }
-          return res.json();
-        })
-        .then(data => {
-          if (!data) {
-            throw new Error("Empty response from server");
-          }
-
-          const safeColor = data.safe ? "#28a745" : "#dc3545";
-          const safeText = data.safe ? "✅ Safe" : "⚠️ Unsafe";
-
-          let html = `
-            <h3 style="margin-top:0; color:#1f6feb">📊 Analysis Result</h3>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
-              <div>
-                <p><b>🦠 Species:</b> ${data.species || "Unknown"}</p>
-                <p><b>📝 Description:</b> ${data.meaning || "No description"}</p>
-                <p><b>🔢 Count:</b> ${data.count || 0} organisms</p>
-                <p><b>📊 Confidence:</b> ${((data.confidence || 0) * 100).toFixed(1)}%</p>
-                <p><b>Status:</b> <span style="color:${safeColor}; font-weight:600; font-size:16px">${safeText}</span></p>
-              </div>
-              <div>
-                ${data.annotated_image ? `<img src="${data.annotated_image}" width="300" style="border-radius:8px; border:2px solid #ddd;">` : "<p>No annotated image</p>"}
-              </div>
-            </div>
-          `;
-          document.getElementById("analysisResult").innerHTML = html;
-          document.getElementById("analysisResult").style.display = "block";
-          downloadReportBtn.style.display = "inline-block";
-        })
-        .catch(err => {
-          console.error("Analysis error:", err);
-          alert("❌ Analysis failed: " + err.message);
-        })
-        .finally(() => {
-          analyzeBtn.disabled = false;
-          analyzeBtn.textContent = "Analyze";
-        });
-    });
-                <p><b>🔢 Count:</b> ${data.count || 0}</p>
-                <p><b>Status:</b> <span style="color:${safeColor}; font-weight:600; font-size:16px">${safeText}</span></p>
-              </div>
-              <div>
-                ${data.annotated_image ? `<img src="${data.annotated_image}" width="300" style="border-radius:8px; border:2px solid #ddd;">` : "<p>No annotated image</p>"}
-              </div>
-            </div>
-          `;
-          document.getElementById("analysisResult").innerHTML = html;
-          document.getElementById("analysisResult").style.display = "block";
-          downloadReportBtn.style.display = "inline-block";
-        })
-        .catch(err => {
-          console.error("Analysis error:", err);
-          alert("❌ Analysis failed: " + err.message);
-        })
-        .finally(() => {
-          analyzeBtn.disabled = false;
-          analyzeBtn.textContent = "Analyze";
-        });
+      try {
+        const res = await fetch(`http://127.0.0.1:8000/api/analyze/${id}/`);
+        if (!res.ok) throw new Error(`Server error ${res.status}`);
+        const data = await res.json();
+        renderAnalysis(data);
+        downloadReportBtn.style.display = "inline-block";
+      } catch (err) {
+        console.error('Analysis error', err);
+        alert('❌ Analysis failed: ' + err.message);
+      } finally {
+        analyzeBtn.disabled = false;
+        analyzeBtn.textContent = "Analyze";
+      }
     });
 
-    // ========================================
-    // PDF DOWNLOAD
-    // ========================================
     downloadReportBtn.addEventListener("click", () => {
-      if (!lastUploadedImageId) {
+      const id = window.lastUploadedImageId || null;
+      if (!id) {
         alert("❌ No analysis to download");
         return;
       }
-      window.open(`http://127.0.0.1:8000/api/download-report/${lastUploadedImageId}/`, "_blank");
+      // Open the report in a new tab
+      window.open(`http://127.0.0.1:8000/api/download-report/${id}/`, "_blank");
     });
   </script>
 </body>
