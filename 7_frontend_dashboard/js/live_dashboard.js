@@ -36,7 +36,7 @@ function makeChart(labels = [], data = []){
 }
 
 async function refreshStats(){
-  const url = '/api/stats?hours=24';
+  const url = 'http://127.0.0.1:8000/api/stats?hours=24';
   try{
     const res = await fetch(url);
     if(!res.ok) throw new Error('Server error: '+res.status);
@@ -58,8 +58,8 @@ async function refreshStats(){
     makeChart(labels, data);
   }catch(err){
     console.error('refreshStats error', err);
-    // keep existing UI; show simple inline message
-    alert('Could not fetch live data: '+err.message);
+    // keep existing UI; show simple inline message - don't block page load
+    console.warn('Could not fetch live data: '+err.message);
   }
 }
 
