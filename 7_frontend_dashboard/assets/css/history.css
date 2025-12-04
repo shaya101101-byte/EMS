@@ -1,0 +1,108 @@
+/* Page-specific styles for History (full-width stacked sections, spacing, and navbar-safe offsets) */
+
+/* Ensure page safe area and background as requested */
+.history-page {
+  padding-top: 130px !important;
+  background: #f5f7fb;
+}
+
+/* Ensure content sits below sticky navbar and is full width for this page */
+body.history-page .content {
+  padding-top: 0; /* padding handled on body.history-page */
+  max-width: none;
+  width: 100%;
+  margin: 0 auto 48px;
+  padding-left: 24px;
+  padding-right: 24px;
+}
+
+/* Full width white sections */
+.full-section {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 28px 28px; /* large padding in requested 20-30px range */
+  margin-bottom: 50px;
+  box-shadow: 0 12px 40px rgba(8,30,70,0.06);
+}
+
+/* Stats row cohesive style */
+
+.stats-row { display: flex; gap: 20px; align-items: stretch; flex-wrap: wrap; }
+
+.stat-box {
+  flex: 1;
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 140px;
+}
+
+.stat-box.wide { flex: 1.4; }
+
+.stat-label {
+  font-size: 13px;
+  color: #667085;
+  margin-bottom: 8px;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #0b4a8b;
+}
+
+/* subtle divider between stat items (visual cohesion, not separate floating cards) */
+.stats-inner .stat-box + .stat-box { box-shadow: inset 1px 0 0 rgba(15,23,42,0.03); }
+
+/* Chart card */
+.chart-card {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 22px 24px; /* large padding per spec */
+  box-shadow: 0 10px 30px rgba(8,30,70,0.04);
+  margin-bottom: 18px;
+}
+
+.chart-card h3 { margin: 0 0 16px 0; color: #083b75; font-size: 20px; }
+
+.chart-card canvas { width: 100% !important; height: auto !important; }
+
+/* Confidence stat cards */
+.stat-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; }
+
+.stat-card { background:#f8fbff; padding:18px; border-radius:10px; box-shadow: 0 8px 24px rgba(8,30,70,0.03); }
+
+.stat-card .stat-label { font-size:13px; color:#667085; }
+.stat-card .stat-value { font-size:22px; font-weight:700; color:#0b4a8b; }
+
+/* Recent list */
+.recent-list { list-style:none; padding:0; margin:0; color:#233; font-size:15px; }
+.recent-list li { padding: 12px 0; border-bottom: 1px solid #f0f3f7; }
+.recent-list li:last-child { border-bottom: none; }
+
+/* All Detections wrapper improvements */
+.history-list { padding: 6px 0; }
+.history-list .card { border-radius: 12px; box-shadow: 0 8px 24px rgba(8,30,70,0.04); }
+
+/* Hide duplicate top logo only on history page to keep single History icon */
+body.history-page .navbar .nav-left img { display: none; }
+
+/* Header title styling */
+.content h2 { font-size: 28px; padding: 18px; border-radius: 12px; }
+.content p.subtitle { margin-bottom: 18px; }
+
+/* Responsive tweaks */
+@media (max-width: 900px) {
+  .stats-row .stats-inner { flex-wrap: wrap; }
+  body.history-page .content { padding-top: 80px; }
+}
+
+@media (max-width: 480px) {
+  .full-section { padding: 22px; margin-bottom: 28px; }
+  .stat-value { font-size: 22px; }
+  .chart-card h3 { font-size: 18px; }
+}

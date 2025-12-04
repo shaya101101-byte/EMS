@@ -12,10 +12,20 @@
     // Ensure analytics page uses only the latest analysisResults stored by upload page
     (function(){
         const results = JSON.parse(localStorage.getItem('analysisResults'));
-        if (!results){
-            document.body.innerHTML = '<h2 style="padding:40px; text-align:center;">No analysis found. Please upload an image first.</h2>';
-            return;
-        }
+
+        // Determine freshness: either a session flag (set when arriving from upload during this tab session)
+        // or we arrived directly from upload.html (document.referrer)
+        const sessionFlag = sessionStorage.getItem('freshAnalysis') === '1';
+        const arrivedFromUpload = (document.referrer || '').split('/').pop().split('?')[0] === 'upload.html';
+
+        // If no stored results at all, leave the page in its default empty state.
+        if (!results) return;
+
+        // If results exist but are NOT fresh (neither session flag nor referrer from upload), do not populate.
+        if (!sessionFlag && !arrivedFromUpload) return;
+
+        // If we did arrive from upload, mark session so refresh keeps it visible during this tab session.
+        if (arrivedFromUpload) sessionStorage.setItem('freshAnalysis','1');
 
         // transform predict response into the legacy `currentAnalysis` shape used by analytics.js
         try{

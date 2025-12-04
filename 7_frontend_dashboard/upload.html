@@ -109,14 +109,14 @@
 
     <!-- MAIN CONTENT -->
     <section class="upload-section">
-        <div class="upload-box">
+        <div class="upload-box upload-card">
             <span class="upload-icon">🔬</span>
-            <h2>Upload Microscopic Image</h2>
-            <p>Upload your water sample image to analyze organisms and water quality.</p>
+            <h2 class="upload-title">Upload Microscopic Image</h2>
+            <p class="upload-description">Upload your water sample image to analyze organisms and water quality.</p>
 
             <!-- keep original file input and IDs untouched; wrap visually in styled button -->
             <div class="file-chooser">
-                <label class="choose-btn">Choose File
+                <label class="choose-btn upload-btn">Choose File
                     <input type="file" id="imageInput" accept="image/*">
                 </label>
             </div>
@@ -124,7 +124,7 @@
             <img id="previewImage" style="max-width: 400px; display:none; border-radius: 10px;">
 
             <div style="margin-top:16px;">
-                <button id="analyzeBtn" class="btn primary">Analyze</button>
+                <button id="analyzeBtn" class="btn primary upload-btn">Analyze</button>
             </div>
 
             <!-- Visual drag-and-drop zone (decorative only - does not modify JS behavior) -->

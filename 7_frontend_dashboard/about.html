@@ -6,51 +6,212 @@
     <title>About</title>
     <link rel="stylesheet" href="css/style.css">
     <style>
-        /* About page local styles (offline-only) */
-        body { background: linear-gradient(180deg,#f6fbff 0%, #eef6ff 60%); }
-        .about-hero {
-            max-width: 1100px;
-            margin: 36px auto 18px;
-            padding: 28px;
-            background: rgba(255,255,255,0.95);
-            border-radius: 14px;
-            box-shadow: 0 12px 40px rgba(8,30,70,0.06);
-            display: flex;
-            gap: 24px;
-            align-items: center;
+        /* About page local styles (offline-only) - Modern Vertical Layout */
+        body { background: linear-gradient(180deg, #f6fbff 0%, #eef6ff 60%); }
+
+        main.about-main { 
+            max-width: 900px; 
+            margin: 60px auto; 
+            padding: 0 24px 60px; 
         }
 
-        .about-hero .logo { width: 96px; height: 96px; border-radius: 12px; overflow: hidden; flex: 0 0 96px; }
-        .about-hero h1 { font-size: 26px; margin: 0 0 6px; color: #083b75; }
-        .about-hero p.lead { margin: 0; color: #30445f; font-size: 15px; line-height: 1.6; }
+        /* Section 1: Header Section */
+        .section-header {
+            margin-bottom: 60px;
+            animation: fadeIn 0.8s ease both;
+        }
+        .section-header h1 {
+            font-size: 48px;
+            font-weight: 700;
+            color: #083b75;
+            margin: 0 0 20px;
+            letter-spacing: -0.5px;
+        }
+        .section-header p {
+            font-size: 18px;
+            color: #30445f;
+            line-height: 1.7;
+            margin: 0;
+            max-width: 700px;
+        }
 
-        .cards-row { display: grid; grid-template-columns: repeat(auto-fit,minmax(240px,1fr)); gap: 18px; margin: 22px auto; max-width: 1100px; }
-        .card { background: white; padding: 18px; border-radius: 12px; box-shadow: 0 10px 30px rgba(8,30,70,0.05); transition: transform .18s ease, box-shadow .18s ease; }
-        .card:hover { transform: translateY(-6px); box-shadow: 0 20px 50px rgba(8,30,70,0.10); }
+        /* Full-width stacked sections */
+        .about-section {
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 45px;
+            margin-bottom: 50px;
+            box-shadow: 0 8px 24px rgba(8, 30, 70, 0.04);
+            animation: fadeIn 0.8s ease both;
+            transition: box-shadow 0.3s ease;
+        }
 
-        .card h3 { margin: 0 0 8px; color: #0b4a8b; font-size: 18px; }
-        .card p { margin: 0; color: #33475b; font-size: 14px; line-height: 1.6; }
+        .about-section:hover {
+            box-shadow: 0 12px 32px rgba(8, 30, 70, 0.08);
+        }
 
-        .feature-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
-        .feature-list li { display:flex; gap:12px; align-items:flex-start; }
-        .feature-icon { width:36px; height:36px; background: linear-gradient(135deg,#00b4ff,#0066cc); color:white; display:flex; align-items:center; justify-content:center; border-radius:8px; font-weight:700; }
+        .about-section h2 {
+            font-size: 32px;
+            font-weight: 700;
+            color: #083b75;
+            margin: 0 0 24px;
+            padding-bottom: 16px;
+            border-bottom: 3px solid #00b4ff;
+            display: inline-block;
+        }
 
-        .journey { max-width: 1100px; margin: 18px auto 28px; padding: 18px; background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(250,250,255,0.9)); border-radius:12px; box-shadow: 0 10px 30px rgba(8,30,70,0.04); }
-        .journey ul { margin: 0; padding: 0 0 0 18px; }
+        .about-section p {
+            font-size: 16px;
+            color: #33475b;
+            line-height: 1.8;
+            margin: 0 0 16px;
+        }
 
-        .contact { display:flex; gap:14px; flex-wrap:wrap; align-items:center; }
-        .contact a { color:#0066cc; text-decoration:none; font-weight:600; }
+        /* Mission section */
+        #mission-section p {
+            font-size: 17px;
+            margin: 0;
+        }
 
-        /* subtle floating accent */
-        .accent { position: absolute; right: 24px; top: 20px; width: 160px; height: 160px; background: radial-gradient(circle at 30% 30%, rgba(0,198,255,0.14), transparent 30%); border-radius: 50%; filter: blur(12px); pointer-events:none; }
+        /* What It Does - Numbered List */
+        #what-section ol {
+            margin: 0;
+            padding-left: 24px;
+            list-style: decimal;
+        }
 
-        /* fade-in */
-        @keyframes fadeIn { from {opacity:0; transform: translateY(6px);} to {opacity:1; transform: none;} }
-        .about-hero, .cards-row .card, .journey { animation: fadeIn .6s ease both; }
+        #what-section li {
+            font-size: 16px;
+            color: #33475b;
+            line-height: 1.8;
+            margin-bottom: 14px;
+            padding-left: 8px;
+        }
 
-        @media (max-width: 800px) {
-            .about-hero { flex-direction: column; text-align: left; }
-            .about-hero .logo { margin: 0 auto; }
+        #what-section strong {
+            color: #083b75;
+        }
+
+        /* Why AquaSafe - Bullet Points */
+        #why-section ul {
+            margin: 0;
+            padding-left: 24px;
+            list-style: disc;
+        }
+
+        #why-section li {
+            font-size: 16px;
+            color: #33475b;
+            line-height: 1.8;
+            margin-bottom: 12px;
+            padding-left: 8px;
+        }
+
+        /* Contact section */
+        #contact-section {
+            padding-bottom: 20px;
+        }
+
+        .contact-item {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+            font-size: 16px;
+            color: #33475b;
+        }
+
+        .contact-item strong {
+            color: #083b75;
+            min-width: 80px;
+        }
+
+        .contact-item a {
+            color: #0066cc;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.2s ease;
+        }
+
+        .contact-item a:hover {
+            color: #00b4ff;
+            text-decoration: underline;
+        }
+
+        /* Journey section */
+        #journey-section ul {
+            margin: 0;
+            padding-left: 24px;
+            list-style: disc;
+        }
+
+        #journey-section li {
+            font-size: 16px;
+            color: #33475b;
+            line-height: 1.8;
+            margin-bottom: 12px;
+            padding-left: 8px;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(12px);
+            }
+            to {
+                opacity: 1;
+                transform: none;
+            }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            main.about-main {
+                margin: 40px auto;
+                padding: 0 16px 40px;
+            }
+
+            .section-header h1 {
+                font-size: 36px;
+                margin-bottom: 16px;
+            }
+
+            .section-header p {
+                font-size: 16px;
+            }
+
+            .about-section {
+                padding: 28px;
+                margin-bottom: 36px;
+            }
+
+            .about-section h2 {
+                font-size: 24px;
+            }
+
+            .about-section p,
+            #what-section li,
+            #why-section li,
+            .contact-item,
+            #journey-section li {
+                font-size: 15px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .section-header h1 {
+                font-size: 28px;
+            }
+
+            .about-section {
+                padding: 20px;
+                margin-bottom: 24px;
+                border-radius: 12px;
+            }
+
+            .about-section h2 {
+                font-size: 20px;
+            }
         }
     </style>
 </head>
@@ -73,56 +234,74 @@
     </header>
 
     <!-- PAGE CONTENT -->
-    <main>
-        <div class="accent"></div>
-        <section class="about-hero">
-            <div class="logo"><img src="assets1/logo.jpeg" alt="logo" width="96" height="96" style="width:100%;height:100%;object-fit:cover"></div>
-            <div>
-                <h1>About AquaSafe AI</h1>
-                <p class="lead">AquaSafe AI is an intelligent microscopy system designed to automate microorganism detection, plankton identification, and safety assessment. Using advanced Deep Learning, Computer Vision, and embedded hardware, it provides fast, accurate, and real-time analysis of water samples.</p>
+    <main class="about-main">
+        <!-- Section 1: Header Section -->
+        <section class="section-header">
+            <h1>About AquaSafe AI</h1>
+            <p>AquaSafe AI is an intelligent microscopy system designed to automate microorganism detection, plankton identification, and safety assessment. Using advanced Deep Learning, Computer Vision, and embedded hardware, it provides fast, accurate, and real-time analysis of water samples.</p>
+        </section>
+
+        <!-- Section 2: Our Mission -->
+        <section class="about-section" id="mission-section">
+            <h2>Our Mission</h2>
+            <p>To make water-quality monitoring effortless, reliable, and accessible by combining modern AI technology with innovative microscopy solutions. We believe that clean water is essential for all life, and our mission is to provide the tools and technologies that make it easier to monitor and protect water quality worldwide.</p>
+        </section>
+
+        <!-- Section 3: What AquaSafe AI Does -->
+        <section class="about-section" id="what-section">
+            <h2>What AquaSafe AI Does</h2>
+            <ol>
+                <li><strong>Automated Microorganism Detection</strong> – Detects microbes and plankton species using trained AI models and deep learning algorithms.</li>
+                <li><strong>Plankton Counting & Classification</strong> – Counts plankton, identifies species, and generates quick insights about ecosystem health.</li>
+                <li><strong>Real-Time Safety Analysis</strong> – Warns about potential contamination or harmful microorganism levels in water samples.</li>
+                <li><strong>Embedded Microscopy Integration</strong> – Works smoothly on low-cost embedded systems and portable hardware setups.</li>
+                <li><strong>Instant Report Generation</strong> – Produces annotated images, visuals, and comprehensive logs for analysis and documentation.</li>
+            </ol>
+        </section>
+
+        <!-- Section 4: Why AquaSafe AI? -->
+        <section class="about-section" id="why-section">
+            <h2>Why AquaSafe AI?</h2>
+            <ul>
+                <li>Reduces manual microscope work and saves time in water quality monitoring</li>
+                <li>Improves accuracy with AI-powered detection and analysis</li>
+                <li>Faster results than traditional manual observation methods</li>
+                <li>Works in remote or limited-resource environments</li>
+                <li>Helps water-safety agencies and environmental researchers make informed decisions</li>
+                <li>Supports sustainable development and clean water initiatives</li>
+            </ul>
+        </section>
+
+        <!-- Section 5: Contact / Support -->
+        <section class="about-section" id="contact-section">
+            <h2>Contact & Support</h2>
+            <div class="contact-item">
+                <strong>Email:</strong>
+                <a href="mailto:support@aquasafeai.com">support@aquasafeai.com</a>
+            </div>
+            <div class="contact-item">
+                <strong>GitHub:</strong>
+                <a href="https://github.com/your-project" target="_blank">github.com/your-project</a>
+            </div>
+            <div class="contact-item">
+                <strong>Documentation:</strong>
+                <a href="https://docs.aquasafeai.com" target="_blank">docs.aquasafeai.com</a>
+            </div>
+            <div class="contact-item">
+                <strong>Support Hours:</strong>
+                <span>Monday to Friday, 9 AM – 6 PM UTC</span>
             </div>
         </section>
 
-        <div class="cards-row">
-            <div class="card">
-                <h3>Our Mission</h3>
-                <p>To make water-quality monitoring effortless, reliable, and accessible by combining modern AI technology with innovative microscopy solutions.</p>
-            </div>
-
-            <div class="card">
-                <h3>What AquaSafe AI Does</h3>
-                <ul class="feature-list">
-                    <li><div class="feature-icon">1</div><div><strong>Automated Microorganism Detection</strong><div style="color:#55656f;font-size:13px">Detects microbes and plankton species using trained AI models.</div></div></li>
-                    <li><div class="feature-icon">2</div><div><strong>Plankton Counting &amp; Classification</strong><div style="color:#55656f;font-size:13px">Counts plankton, identifies species, and generates quick insights.</div></div></li>
-                    <li><div class="feature-icon">3</div><div><strong>Real-Time Safety Analysis</strong><div style="color:#55656f;font-size:13px">Warns about potential contamination or harmful microorganism levels.</div></div></li>
-                    <li><div class="feature-icon">4</div><div><strong>Embedded Microscopy Integration</strong><div style="color:#55656f;font-size:13px">Works smoothly on low-cost embedded systems.</div></div></li>
-                    <li><div class="feature-icon">5</div><div><strong>Instant Report Generation</strong><div style="color:#55656f;font-size:13px">Produces annotated images, visuals, and logs.</div></div></li>
-                </ul>
-            </div>
-
-            <div class="card">
-                <h3>Why AquaSafe AI?</h3>
-                <p>- Reduces manual microscope work<br>- Improves accuracy with AI<br>- Faster than traditional observation<br>- Works in remote or limited environments<br>- Helps water-safety and environmental research</p>
-            </div>
-
-            <div class="card">
-                <h3>Contact / Support</h3>
-                <div class="contact">
-                    <div>Email: <a href="mailto:support@aquasafeai.com">support@aquasafeai.com</a></div>
-                    <div>GitHub: <a href="https://github.com/your-project" target="_blank">github.com/your-project</a></div>
-                    <div>Docs: <a href="https://docs.aquasafeai.com" target="_blank">docs.aquasafeai.com</a></div>
-                </div>
-            </div>
-        </div>
-
-        <section class="journey">
-            <h3 style="margin-top:0;color:#0b4a8b">Development Journey</h3>
+        <!-- Section 6: Development Journey -->
+        <section class="about-section" id="journey-section">
+            <h2>Development Journey</h2>
             <ul>
-                <li>2024: Initial concept and dataset preparation</li>
-                <li>2025: Machine learning model trained for plankton detection</li>
-                <li>2025: Model integration + UI development</li>
-                <li>2025: Analytics dashboard and upload pipeline completed</li>
-                <li>2027–2028: Embedded hardware integration</li>
+                <li><strong>2024:</strong> Initial concept and dataset preparation for microorganism detection</li>
+                <li><strong>2025 Q1:</strong> Machine learning model trained for plankton detection and classification</li>
+                <li><strong>2025 Q2:</strong> Model integration into web platform and UI development</li>
+                <li><strong>2025 Q3:</strong> Analytics dashboard, upload pipeline, and reporting features completed</li>
+                <li><strong>2026–2028:</strong> Embedded hardware integration and field deployment</li>
             </ul>
         </section>
     </main>
