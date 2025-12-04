@@ -20,7 +20,53 @@
         <main class="admin-main">
             <h2>Analysis History</h2>
             <p>All image analyses performed by the backend.</p>
-            
+
+            <!-- Analytics UI: inserted dynamically; hidden when no history exists -->
+            <section id="analytics-section" style="display:none; margin-bottom:16px">
+                <div class="analytics-cards" style="display:flex; gap:12px; margin-bottom:12px; flex-wrap:wrap">
+                    <div class="card" id="card-total" style="flex:1 1 160px; padding:10px; background:#1f2937; color:#fff; border-radius:6px">
+                        <div class="card-title">Total Analyses</div>
+                        <div class="card-value" id="total-analyses">0</div>
+                    </div>
+                    <div class="card" id="card-safe" style="flex:1 1 160px; padding:10px; background:#0f766e; color:#fff; border-radius:6px">
+                        <div class="card-title">Safe Count</div>
+                        <div class="card-value" id="safe-count">0</div>
+                    </div>
+                    <div class="card" id="card-unsafe" style="flex:1 1 160px; padding:10px; background:#7f1d1d; color:#fff; border-radius:6px">
+                        <div class="card-title">Unsafe Count</div>
+                        <div class="card-value" id="unsafe-count">0</div>
+                    </div>
+                    <div class="card" id="card-most" style="flex:1 1 240px; padding:10px; background:#374151; color:#fff; border-radius:6px">
+                        <div class="card-title">Most Detected Organism</div>
+                        <div class="card-value" id="most-detected">—</div>
+                    </div>
+                </div>
+
+                <div class="analytics-charts" style="display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap">
+                    <div style="flex:1 1 360px; background:#111827; padding:10px; border-radius:6px; color:#fff">
+                        <div style="font-weight:600; margin-bottom:8px">Detections by Organism</div>
+                        <canvas id="bar-chart" width="400" height="200"></canvas>
+                    </div>
+                    <div style="flex:1 1 240px; background:#111827; padding:10px; border-radius:6px; color:#fff">
+                        <div style="font-weight:600; margin-bottom:8px">Verdict Distribution</div>
+                        <canvas id="pie-chart" width="240" height="200"></canvas>
+                    </div>
+                    <div style="flex:1 1 300px; background:#111827; padding:10px; border-radius:6px; color:#fff">
+                        <div style="font-weight:600; margin-bottom:8px">Confidence Summary</div>
+                        <div id="confidence-summary" style="font-size:14px; line-height:1.5">
+                            <div>Average: <span id="conf-avg">-</span></div>
+                            <div>Highest: <span id="conf-high">-</span></div>
+                            <div>Lowest: <span id="conf-low">-</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-top:12px; background:#0b1220; padding:10px; border-radius:6px; color:#fff">
+                    <div style="font-weight:600; margin-bottom:8px">Recent Activity</div>
+                    <ul id="recent-activity" style="list-style:none; padding-left:0; margin:0; max-height:140px; overflow:auto"></ul>
+                </div>
+            </section>
+
             <div class="filter-bar">
                 <input type="text" id="search" placeholder="Search by filename or timestamp...">
                 <button onclick="filterHistory()">Filter</button>
@@ -54,6 +100,195 @@
             a.href += (a.href.includes("?") ? "&" : "?") + "token=" + token;
         });
 
+        // Helper: Calculate analytics metrics from history rows
+        function calculateAnalytics(rows) {
+            const metrics = {
+                total: rows.length,
+                safe: 0,
+                unsafe: 0,
+                organisms: {},
+                confidences: [],
+                recent: []
+            };
+
+            rows.forEach(r => {
+                // Count safe/unsafe
+                const quality = (r.quality || "Unknown").toLowerCase();
+                if (quality.includes("safe")) metrics.safe++;
+                else if (quality.includes("unsafe")) metrics.unsafe++;
+
+                // Collect organism detections (from counts field, if available)
+                if (r.counts && typeof r.counts === "object") {
+                    Object.entries(r.counts).forEach(([org, count]) => {
+                        metrics.organisms[org] = (metrics.organisms[org] || 0) + count;
+                    });
+                }
+
+                // Collect confidence scores
+                if (r.confidence !== undefined && r.confidence !== null) {
+                    metrics.confidences.push(r.confidence);
+                }
+
+                // Store for recent activity
+                metrics.recent.push({
+                    timestamp: r.timestamp || r.created_at,
+                    filename: r.image_path ? r.image_path.split('/').pop() : "Unknown",
+                    quality: r.quality || "Unknown",
+                    total: r.total || 0
+                });
+            });
+
+            // Calculate confidence stats
+            if (metrics.confidences.length > 0) {
+                const avg = metrics.confidences.reduce((a, b) => a + b, 0) / metrics.confidences.length;
+                metrics.confAvg = avg.toFixed(2);
+                metrics.confHigh = Math.max(...metrics.confidences).toFixed(2);
+                metrics.confLow = Math.min(...metrics.confidences).toFixed(2);
+            }
+
+            return metrics;
+        }
+
+        // Helper: Find most detected organism
+        function getMostDetected(organisms) {
+            if (Object.keys(organisms).length === 0) return "—";
+            return Object.entries(organisms).reduce((a, b) => b[1] > a[1] ? b : a)[0];
+        }
+
+        // Helper: Draw bar chart for organisms
+        function drawBarChart(canvas, organisms) {
+            if (!canvas) return;
+            const ctx = canvas.getContext("2d");
+            const names = Object.keys(organisms);
+            const counts = Object.values(organisms);
+
+            if (names.length === 0) {
+                ctx.fillStyle = "#999";
+                ctx.font = "14px Arial";
+                ctx.fillText("No data", 20, 100);
+                return;
+            }
+
+            const barWidth = canvas.width / (names.length * 1.5);
+            const maxCount = Math.max(...counts, 1);
+            const scale = (canvas.height * 0.8) / maxCount;
+
+            ctx.fillStyle = "#111827";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = "#374151";
+            ctx.strokeRect(0, 0, canvas.width, canvas.height);
+
+            const colors = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444"];
+
+            names.forEach((name, idx) => {
+                const x = idx * canvas.width / names.length + 20;
+                const height = counts[idx] * scale;
+                const y = canvas.height - height - 20;
+
+                // Bar
+                ctx.fillStyle = colors[idx % colors.length];
+                ctx.fillRect(x, y, barWidth * 0.8, height);
+
+                // Label
+                ctx.fillStyle = "#d1d5db";
+                ctx.font = "12px Arial";
+                ctx.textAlign = "center";
+                ctx.fillText(name, x + barWidth * 0.4, canvas.height - 5);
+                ctx.fillText(counts[idx], x + barWidth * 0.4, y - 5);
+            });
+        }
+
+        // Helper: Draw pie chart for verdict distribution
+        function drawPieChart(canvas, safe, unsafe) {
+            if (!canvas) return;
+            const ctx = canvas.getContext("2d");
+            const total = safe + unsafe;
+
+            ctx.fillStyle = "#111827";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = "#374151";
+            ctx.strokeRect(0, 0, canvas.width, canvas.height);
+
+            if (total === 0) {
+                ctx.fillStyle = "#999";
+                ctx.font = "14px Arial";
+                ctx.fillText("No data", 50, 100);
+                return;
+            }
+
+            const centerX = canvas.width * 0.4;
+            const centerY = canvas.height * 0.5;
+            const radius = 50;
+
+            // Safe slice (green)
+            const safeAngle = (safe / total) * 2 * Math.PI;
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY);
+            ctx.arc(centerX, centerY, radius, 0, safeAngle);
+            ctx.closePath();
+            ctx.fillStyle = "#10b981";
+            ctx.fill();
+
+            // Unsafe slice (red)
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY);
+            ctx.arc(centerX, centerY, radius, safeAngle, 2 * Math.PI);
+            ctx.closePath();
+            ctx.fillStyle = "#ef4444";
+            ctx.fill();
+
+            // Legend
+            ctx.font = "12px Arial";
+            ctx.fillStyle = "#10b981";
+            ctx.fillRect(canvas.width - 120, 10, 12, 12);
+            ctx.fillStyle = "#d1d5db";
+            ctx.fillText(`Safe: ${safe}`, canvas.width - 100, 20);
+
+            ctx.fillStyle = "#ef4444";
+            ctx.fillRect(canvas.width - 120, 30, 12, 12);
+            ctx.fillStyle = "#d1d5db";
+            ctx.fillText(`Unsafe: ${unsafe}`, canvas.width - 100, 40);
+        }
+
+        // Helper: Render analytics UI
+        function renderAnalytics(rows) {
+            const section = document.getElementById("analytics-section");
+            if (!section) return;
+
+            if (rows.length === 0) {
+                section.style.display = "none";
+                return;
+            }
+
+            section.style.display = "block";
+            const metrics = calculateAnalytics(rows);
+
+            // Update cards
+            document.getElementById("total-analyses").textContent = metrics.total;
+            document.getElementById("safe-count").textContent = metrics.safe;
+            document.getElementById("unsafe-count").textContent = metrics.unsafe;
+            document.getElementById("most-detected").textContent = getMostDetected(metrics.organisms);
+
+            // Update confidence summary
+            document.getElementById("conf-avg").textContent = metrics.confAvg || "—";
+            document.getElementById("conf-high").textContent = metrics.confHigh || "—";
+            document.getElementById("conf-low").textContent = metrics.confLow || "—";
+
+            // Draw charts
+            drawBarChart(document.getElementById("bar-chart"), metrics.organisms);
+            drawPieChart(document.getElementById("pie-chart"), metrics.safe, metrics.unsafe);
+
+            // Recent activity (last 5)
+            const recentList = document.getElementById("recent-activity");
+            recentList.innerHTML = "";
+            metrics.recent.slice(-5).reverse().forEach(r => {
+                const li = document.createElement("li");
+                li.style.cssText = "padding:6px 0; border-bottom:1px solid #374151; opacity:0.9";
+                li.innerHTML = `<strong>${r.filename}</strong> • ${r.quality} • ${r.total} detections<br><small style="opacity:0.6">${new Date(r.timestamp).toLocaleString()}</small>`;
+                recentList.appendChild(li);
+            });
+        }
+
         async function loadHistory() {
             try {
                 const resp = await fetch(`/admin/api/history?token=${token}`, {headers: {"x-admin-token": token}});
@@ -63,6 +298,9 @@
                     const tbody = document.getElementById("history-body");
                     tbody.innerHTML = "";
                     
+                    // Render analytics with current data
+                    renderAnalytics(rows);
+
                     if (rows.length === 0) {
                         tbody.innerHTML = "<tr><td colspan='6'>No history found</td></tr>";
                         return;
