@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Upload Image</title>
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="assets/css/upload.css">
     <style>
         /* Page-local UI enhancements (offline, upload-only) */
         body { background: linear-gradient(to bottom right, #dfe9f3, #ffffff); }
@@ -24,9 +25,6 @@
 
         .upload-box h2 { margin: 6px 0 8px; color: #083b75; font-size: 20px; }
         .upload-box p { margin: 0 0 18px; color:#34526a; font-size:14px; }
-
-        /* Icon above title */
-        .upload-icon { font-size:34px; display:block; margin-bottom:8px; }
 
         /* File preview tweaks */
         #previewImage { max-width: 100%; display: none; border-radius: 10px; margin-top: 14px; }
@@ -110,8 +108,7 @@
     <!-- MAIN CONTENT -->
     <section class="upload-section">
         <div class="upload-box upload-card">
-            <span class="upload-icon">🔬</span>
-            <h2 class="upload-title">Upload Microscopic Image</h2>
+            <h2 class="upload-title">🔬 Upload Microscopic Image</h2>
             <p class="upload-description">Upload your water sample image to analyze organisms and water quality.</p>
 
             <!-- keep original file input and IDs untouched; wrap visually in styled button -->

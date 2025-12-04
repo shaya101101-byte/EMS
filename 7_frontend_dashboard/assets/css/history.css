@@ -11,6 +11,23 @@
   margin-top: 120px !important;
 }
 
+/* Title styling */
+.history-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 26px;
+  font-weight: 600;
+}
+
+/* Subtitle styling */
+.history-sub {
+  margin-top: -5px;
+  margin-bottom: 25px;
+  color: #555;
+  font-size: 15px;
+}
+
 body.history-page .content {
   padding-top: 0; /* padding handled on body.history-page */
   max-width: none;
