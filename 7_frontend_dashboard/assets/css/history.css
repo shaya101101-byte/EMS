@@ -3,10 +3,14 @@
 /* Ensure page safe area and background as requested */
 .history-page {
   padding-top: 130px !important;
-  background: #f5f7fb;
+  background: #f7f9fc !important;
 }
 
 /* Ensure content sits below sticky navbar and is full width for this page */
+.history-content {
+  margin-top: 120px !important;
+}
+
 body.history-page .content {
   padding-top: 0; /* padding handled on body.history-page */
   max-width: none;
@@ -15,7 +19,6 @@ body.history-page .content {
   padding-left: 24px;
   padding-right: 24px;
   background: #f7f9fc; /* very light gray behind content area */
-  margin-top: 120px; /* ensure content starts below header */
 }
 
 /* Full width white sections */
@@ -30,6 +33,13 @@ body.history-page .content {
 /* Stats row cohesive style */
 
 .stats-row { display: flex; gap: 20px; align-items: stretch; flex-wrap: wrap; }
+
+.stat-card {
+  background: white !important;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+}
 
 .stat-box {
   flex: 1;
@@ -74,7 +84,7 @@ body.history-page .content {
 .chart-card canvas { width: 100% !important; height: auto !important; }
 
 /* Ensure charts have fixed height so they are not empty-looking */
-#bar-chart, #pie-chart { height: 320px; }
+#bar-chart, #pie-chart { height: 320px !important; }
 
 /* Confidence stat cards */
 .stat-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; }
@@ -93,7 +103,7 @@ body.history-page .content {
 .history-list { padding: 6px 0; }
 .history-list .card { border-radius: 12px; box-shadow: 0 8px 24px rgba(8,30,70,0.04); }
 
-/* (Navbar logo restored) */
+/* Navbar logo restored - no hiding rule applied */
 
 /* Header title styling */
 .content h2 { font-size: 28px; padding: 18px; border-radius: 12px; }
