@@ -35,15 +35,47 @@
 
   <main class="dashboard-container">
     <h2>Live Dashboard</h2>
-    <p style="color:#555;margin-top:4px;margin-bottom:20px">Real-time sensor values (dummy data). Click <strong>Refresh Data</strong> to fetch latest values.</p>
+    <p style="color:#555;margin-top:4px;margin-bottom:20px">Real-time microscope/webcam feed. Select input source and click Start Feed to begin.</p>
 
-    <div class="controls">
+    <!-- Modern Live Feed Section -->
+    <div id="videoContainer">
+      <video id="liveVideoFeed" playsinline autoplay muted></video>
+      <div id="videoPlaceholder">Click "Start Feed" to begin streaming</div>
+    </div>
+
+    <!-- Feed Controls -->
+    <div class="feed-controls">
+      <div class="control-group">
+        <label>Input Source</label>
+        <select id="sourceToggle">
+          <option value="webcam">Webcam</option>
+          <option value="microscope">USB Microscope</option>
+        </select>
+      </div>
+
+        <div class="control-group">
+        <label>&nbsp;</label>
+        <div class="feed-buttons">
+          <button id="startFeedBtn" class="feed-btn start">Start Feed</button>
+          <button id="stopFeedBtn" class="feed-btn stop" disabled>Stop Feed</button>
+          <button id="captureSnapshotBtn" class="feed-btn capture-btn" disabled>Capture Snapshot</button>
+        </div>
+      </div>
+
+      <div class="fps-indicator">
+        <div class="label">FPS</div>
+        <div id="fpsValue" class="value">0 FPS</div>
+      </div>
+    </div>
+
+    <!-- Legacy sensor cards (preserved) -->
+    <div class="controls" style="display:none;">
       <button id="refreshBtn" class="btn">Refresh Data</button>
       <button id="autoRefreshBtn" class="btn secondary">Start Auto-Refresh</button>
       <div style="margin-left:auto;color:#666">Showing last 24 hours (Turbidity)</div>
     </div>
 
-    <div class="cards">
+    <div class="cards" style="display:none;">
       <div class="card"><h4>Turbidity (NTU)</h4><div id="turbidityValue" class="value">--</div></div>
       <div class="card"><h4>pH</h4><div id="phValue" class="value">--</div></div>
       <div class="card"><h4>Temperature (°C)</h4><div id="tempValue" class="value">--</div></div>
@@ -52,7 +84,7 @@
       <div class="card"><h4>Conductivity (µS/cm)</h4><div id="condValue" class="value">--</div></div>
     </div>
 
-    <div class="chart-wrap">
+    <div class="chart-wrap" style="display:none;">
       <canvas id="turbidityChart" height="120"></canvas>
     </div>
 
@@ -60,5 +92,8 @@
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="js/live_dashboard.js"></script>
+  <link rel="stylesheet" href="css/live_dashboard.css">
+  <script src="js/live_dashboard_feed.js"></script>
+  <div id="snapshotToast" class="snapshot-toast" aria-live="polite" hidden></div>
 </body>
 </html>

@@ -47,14 +47,32 @@ def get_history(limit=100):
         results = conn.execute(sel)
         out = []
         for row in results.mappings():
+            # Build image_url for history items
+            image_url = ""
+            image_path = row["image_path"]
+            if image_path:
+                # Normalize path: remove backslashes, handle Windows paths
+                normalized = image_path.replace("\\", "/")
+                if normalized.startswith("/"):
+                    normalized = normalized[1:]
+                # If path is relative (e.g., static/results/...), build URL
+                if not normalized.startswith("http") and not os.path.isabs(image_path):
+                    image_url = f"http://127.0.0.1:8000/{normalized}"
+                elif normalized.startswith("static/") or normalized.startswith("uploaded_images/"):
+                    image_url = f"http://127.0.0.1:8000/{normalized}"
+            
             out.append({
                 "id": row["id"],
                 "timestamp": row["timestamp"].isoformat() if row["timestamp"] is not None else None,
+                "created_at": row["timestamp"].isoformat() if row["timestamp"] is not None else None,
                 "image_path": row["image_path"],
+                "image_url": image_url,
                 "counts": json.loads(row["counts_json"]) if row["counts_json"] else {},
                 "total": row["total"],
                 "dominant": row["dominant"],
                 "quality": row["quality"],
-                "confidence": row["confidence"]
+                "confidence": row["confidence"],
+                "summary": f"Detected {row['total']} organisms",
+                "preds": []
             })
         return out

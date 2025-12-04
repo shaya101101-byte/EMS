@@ -59,6 +59,7 @@ os.makedirs("uploaded_images", exist_ok=True)
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 app.mount("/uploaded_images", StaticFiles(directory="uploaded_images"), name="uploaded_images")
+app.mount("/uploads", StaticFiles(directory="uploaded_images"), name="uploads")
 # ---- AquaSafe AI (Added Feature) ----
 # Mount outputs so generated charts, images and PDFs are available at /outputs
 os.makedirs("outputs", exist_ok=True)
@@ -72,6 +73,10 @@ app.include_router(status_router, prefix="")
 app.include_router(stats_api_router, prefix="")
 from routes.analyze_image import router as analyze_router
 app.include_router(analyze_router, prefix="")
+from routes.analytics_data import router as analytics_data_router
+app.include_router(analytics_data_router, prefix="")
+from routes.analytics_report_pdf import router as analytics_report_pdf_router
+app.include_router(analytics_report_pdf_router, prefix="")
 
 # ---- AquaSafe AI Endpoint (Added Feature) ----
 @app.post("/ai/analyze")
@@ -97,13 +102,37 @@ async def ai_analyze(image: UploadFile = File(...)):
     except Exception as e:
         return {"error": str(e), "status": "ERROR"}
 
-from final_pipeline import analyze_image
-from fastapi import UploadFile, File
-
-@app.post("/final-analyze")
-async def final_analyze_api(file: UploadFile = File(...)):
-    bytes = await file.read()
-    return analyze_image(bytes)
+# Generate PDF Report endpoint
+@app.get("/generate-report")
+def generate_report():
+    """
+    Generate a simple PDF report for download.
+    Returns a PDF file with AquaSafe AI branding.
+    """
+    import datetime
+    from fastapi.responses import FileResponse
+    from reportlab.lib.pagesizes import letter
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+    from reportlab.lib.styles import getSampleStyleSheet
+    
+    filename = "report.pdf"
+    try:
+        doc = SimpleDocTemplate(filename, pagesize=letter)
+        elements = []
+        styles = getSampleStyleSheet()
+        title_style = styles['Title']
+        normal_style = styles['BodyText']
+        
+        elements.append(Paragraph("AquaSafe AI — Analytics Report Generated", title_style))
+        elements.append(Spacer(1, 12))
+        now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        elements.append(Paragraph(f"Report Generated: {now}", normal_style))
+        
+        doc.build(elements)
+        
+        return FileResponse(filename, media_type="application/pdf", filename=filename)
+    except Exception as e:
+        return {"error": str(e)}
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
