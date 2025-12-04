@@ -5,7 +5,7 @@ __pycache__/
 *.pyd
 env/
 venv/
-.venv/
+.venv/g
 ENV/
 env.bak/
 venv.bak/
