@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1300" height="700" viewBox="0 0 1300 700">
+  <style>
+    .box { fill:#f8fafc; stroke:#0f172a; stroke-width:1.8; rx:8; }
+    .cloud { fill:#eef2ff; stroke:#3730a3; stroke-width:1.6; rx:10; }
+    .text { font-family:Arial,Helvetica,sans-serif; font-size:13px; fill:#0b1220; }
+    .title { font-size:18px; font-weight:700; }
+    .arrow { stroke:#0f172a; stroke-width:2; fill:none; marker-end:url(#m); }
+  </style>
+  <defs>
+    <marker id="m" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#0f172a" />
+    </marker>
+  </defs>
+
+  <text x="30" y="32" class="title text">System Architecture</text>
+
+  <!-- Client -->
+  <rect x="30" y="70" width="240" height="100" class="box" />
+  <text x="150" y="100" text-anchor="middle" class="text">User Browser / Mobile</text>
+  <text x="150" y="122" text-anchor="middle" class="text">(7_frontend_dashboard JS)</text>
+
+  <!-- Load Balancer / Reverse Proxy (optional) -->
+  <rect x="310" y="70" width="220" height="90" class="cloud" />
+  <text x="420" y="110" text-anchor="middle" class="text">Reverse Proxy / Nginx (optional)</text>
+
+  <!-- Backend cluster -->
+  <rect x="560" y="30" width="620" height="240" class="box" />
+  <text x="880" y="58" text-anchor="middle" class="text">Backend Cluster</text>
+  <text x="880" y="78" text-anchor="middle" class="text">FastAPI (uvicorn) instances</text>
+
+  <!-- Model worker -->
+  <rect x="600" y="110" width="200" height="120" class="box" />
+  <text x="700" y="150" text-anchor="middle" class="text">Model Worker</text>
+  <text x="700" y="170" text-anchor="middle" class="text">(ultralytics YOLO / tflite)</text>
+
+  <!-- Storage -->
+  <rect x="840" y="110" width="320" height="120" class="box" />
+  <text x="1000" y="150" text-anchor="middle" class="text">Storage & DB</text>
+  <text x="1000" y="170" text-anchor="middle" class="text">(static/results, uploaded_images, sqlite)</text>
+
+  <!-- External -->
+  <rect x="30" y="340" width="300" height="90" class="cloud" />
+  <text x="180" y="375" text-anchor="middle" class="text">Optional ML Repo / S3 / External Model Store</text>
+
+  <!-- Arrows -->
+  <path d="M270 120 L310 120" class="arrow"/>
+  <path d="M530 120 L560 120" class="arrow"/>
+  <path d="M800 180 L840 180" class="arrow"/>
+  <path d="M920 230 L920 330" class="arrow"/>
+
+  <text x="48" y="460" class="text">Notes: Models are stored under `backend/models/`. Backend mounts static folders and exposes `/predict` and `/analyze-image` endpoints.</text>
+
+</svg>

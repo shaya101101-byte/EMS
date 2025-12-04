@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="0 0 1200 700">
+  <style>
+    .comp { fill:#fff7ed; stroke:#b7791f; stroke-width:2; rx:8; }
+    .service { fill:#f0fdf4; stroke:#065f46; stroke-width:2; rx:6; }
+    .text { font-family:Arial,Helvetica,sans-serif; font-size:13px; fill:#07304a; }
+    .title { font-size:18px; font-weight:700; }
+    .arrow { stroke:#07304a; stroke-width:2; fill:none; marker-end:url(#a); }
+  </style>
+  <defs>
+    <marker id="a" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#07304a" />
+    </marker>
+  </defs>
+
+  <text x="30" y="32" class="title text">Component Diagram</text>
+
+  <!-- Frontend Component -->
+  <rect x="30" y="70" width="260" height="120" class="comp" />
+  <text x="160" y="100" text-anchor="middle" class="text">7_frontend_dashboard</text>
+  <text x="160" y="122" text-anchor="middle" class="text">HTML/JS (upload, charts, UI)</text>
+
+  <!-- Backend API -->
+  <rect x="330" y="70" width="300" height="160" class="comp" />
+  <text x="480" y="96" text-anchor="middle" class="text">FastAPI Application</text>
+  <text x="480" y="118" text-anchor="middle" class="text">Routers: predict, analyze-image, stats</text>
+
+  <!-- Services block -->
+  <rect x="670" y="50" width="420" height="220" class="comp" />
+  <text x="880" y="78" text-anchor="middle" class="text">Services</text>
+  <rect x="690" y="100" width="180" height="60" class="service" />
+  <text x="780" y="130" text-anchor="middle" class="text">model_loader</text>
+  <rect x="900" y="100" width="180" height="60" class="service" />
+  <text x="990" y="130" text-anchor="middle" class="text">yolo_analyzer</text>
+  <rect x="790" y="180" width="220" height="60" class="service" />
+  <text x="900" y="210" text-anchor="middle" class="text">inference_engine + postprocessing</text>
+
+  <!-- Models & Storage -->
+  <rect x="330" y="260" width="300" height="120" class="comp" />
+  <text x="480" y="290" text-anchor="middle" class="text">models/ (best.pt)</text>
+  <text x="480" y="312" text-anchor="middle" class="text">static/results, uploaded_images, outputs</text>
+
+  <!-- DB -->
+  <rect x="30" y="260" width="260" height="120" class="comp" />
+  <text x="160" y="300" text-anchor="middle" class="text">database/db.py</text>
+  <text x="160" y="322" text-anchor="middle" class="text">(sqlite / file storage)</text>
+
+  <!-- Arrows -->
+  <path d="M290 130 L330 130" class="arrow"/>
+  <path d="M630 130 L690 130" class="arrow"/>
+  <path d="M850 260 L850 230 L850 230" class="arrow"/>
+  <path d="M480 220 L480 260" class="arrow"/>
+  <path d="M260 320 L330 320" class="arrow"/>
+
+</svg>

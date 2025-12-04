@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900">
+  <style>
+    .actor { font-family:Arial,Helvetica,sans-serif; font-size:14px; fill:#05263a; }
+    .lifeline { stroke:#7b8ca3; stroke-dasharray:4 4; }
+    .arrow { stroke:#2b6cb0; stroke-width:2; fill:none; marker-end:url(#m); }
+    .box { fill:#ffffff; stroke:#2b6cb0; stroke-width:1.5; rx:6; }
+    .title { font-size:18px; font-weight:700; fill:#05263a; }
+  </style>
+  <defs>
+    <marker id="m" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2b6cb0" />
+    </marker>
+  </defs>
+
+  <text x="30" y="32" class="title">Sequence Diagram (Upload → Inference → Response)</text>
+
+  <!-- Actors -->
+  <text x="60" y="80" class="actor">User / Browser</text>
+  <text x="320" y="80" class="actor">Frontend (JS)</text>
+  <text x="620" y="80" class="actor">FastAPI (Routes)</text>
+  <text x="920" y="80" class="actor">YOLO Service / Model</text>
+
+  <!-- Lifelines -->
+  <line x1="100" y1="95" x2="100" y2="700" class="lifeline" />
+  <line x1="360" y1="95" x2="360" y2="700" class="lifeline" />
+  <line x1="660" y1="95" x2="660" y2="700" class="lifeline" />
+  <line x1="960" y1="95" x2="960" y2="700" class="lifeline" />
+
+  <!-- Messages -->
+  <path d="M100 140 L360 140" class="arrow"/>
+  <text x="200" y="130" class="actor">POST /predict (image)</text>
+
+  <path d="M360 180 L660 180" class="arrow"/>
+  <text x="470" y="170" class="actor">Forward to route & validation</text>
+
+  <path d="M660 220 L960 220" class="arrow"/>
+  <text x="760" y="210" class="actor">Call YOLO analyze / inference</text>
+
+  <path d="M960 300 L660 300" class="arrow"/>
+  <text x="760" y="290" class="actor">Return detections (boxes, charts)</text>
+
+  <path d="M660 340 L360 340" class="arrow"/>
+  <text x="470" y="330" class="actor">Route builds response, saves annotated image, DB insert</text>
+
+  <path d="M360 380 L100 380" class="arrow"/>
+  <text x="200" y="370" class="actor">200 OK + analysis JSON</text>
+
+</svg>

@@ -97,5 +97,13 @@ async def ai_analyze(image: UploadFile = File(...)):
     except Exception as e:
         return {"error": str(e), "status": "ERROR"}
 
+from final_pipeline import analyze_image
+from fastapi import UploadFile, File
+
+@app.post("/final-analyze")
+async def final_analyze_api(file: UploadFile = File(...)):
+    bytes = await file.read()
+    return analyze_image(bytes)
+
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

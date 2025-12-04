@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="700" viewBox="0 0 1000 700">
+  <style>
+    .box { fill:#f7f9fc; stroke:#2b6cb0; stroke-width:2; rx:8; }
+    .arrow { stroke:#2b6cb0; stroke-width:2; fill:none; marker-end:url(#arrowhead);} 
+    .text { font-family:Arial,Helvetica,sans-serif; font-size:14px; fill:#0b274a; }
+    .title { font-size:18px; font-weight:700; }
+  </style>
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2b6cb0" />
+    </marker>
+  </defs>
+
+  <text x="30" y="32" class="title text">Flowchart: Request → Analysis → Response</text>
+
+  <!-- Frontend -->
+  <rect x="40" y="70" width="220" height="70" class="box" />
+  <text x="150" y="110" text-anchor="middle" class="text">Frontend (JS/HTML)</text>
+
+  <!-- API Gateway -->
+  <rect x="320" y="70" width="240" height="70" class="box" />
+  <text x="440" y="110" text-anchor="middle" class="text">FastAPI Routes</text>
+
+  <!-- Service -->
+  <rect x="620" y="40" width="320" height="110" class="box" />
+  <text x="780" y="75" text-anchor="middle" class="text">Inference Services</text>
+  <text x="780" y="95" text-anchor="middle" class="text">(model_loader, yolo_analyzer)</text>
+
+  <!-- Storage/DB -->
+  <rect x="320" y="200" width="240" height="70" class="box" />
+  <text x="440" y="240" text-anchor="middle" class="text">Storage / DB</text>
+
+  <!-- Arrows -->
+  <path d="M260 105 L320 105" class="arrow"/>
+  <path d="M560 105 L620 105" class="arrow"/>
+  <path d="M480 240 L480 140" class="arrow"/>
+  <path d="M740 150 L740 200 L560 200" class="arrow"/>
+
+  <!-- Notes -->
+  <text x="48" y="160" class="text">User uploads image → frontend posts to `/predict` or `/analyze-image`</text>
+  <text x="48" y="180" class="text">Backend runs inference → saves annotated image → stores record in DB</text>
+
+</svg>

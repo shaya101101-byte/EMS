@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="700" viewBox="0 0 1100 700">
+  <style>
+    .store { fill:#f0f9ff; stroke:#0b63a8; stroke-width:2; rx:6; }
+    .proc { fill:#fff7ed; stroke:#b45309; stroke-width:2; rx:6; }
+    .text { font-family:Arial,Helvetica,sans-serif; font-size:13px; fill:#07263a; }
+    .title { font-size:18px; font-weight:700; }
+    .arrow { stroke:#0b63a8; stroke-width:2; fill:none; marker-end:url(#a); }
+  </style>
+  <defs>
+    <marker id="a" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#0b63a8" />
+    </marker>
+  </defs>
+
+  <text x="30" y="32" class="title text">Data Flow Diagram</text>
+
+  <rect x="40" y="70" width="220" height="90" class="store" />
+  <text x="150" y="110" text-anchor="middle" class="text">Uploaded Image (client)</text>
+
+  <rect x="320" y="70" width="260" height="110" class="proc" />
+  <text x="450" y="100" text-anchor="middle" class="text">FastAPI: /predict</text>
+  <text x="450" y="120" text-anchor="middle" class="text">Validation → Save /uploaded_images</text>
+
+  <rect x="640" y="70" width="360" height="140" class="proc" />
+  <text x="820" y="95" text-anchor="middle" class="text">Inference Engine / YOLO</text>
+  <text x="820" y="115" text-anchor="middle" class="text">Produce detections, annotated image, charts, PDF</text>
+
+  <rect x="320" y="220" width="260" height="110" class="store" />
+  <text x="450" y="255" text-anchor="middle" class="text">Storage: static/results, outputs</text>
+
+  <rect x="640" y="220" width="260" height="110" class="store" />
+  <text x="770" y="255" text-anchor="middle" class="text">Database (detection records)</text>
+
+  <path d="M260 115 L320 115" class="arrow"/>
+  <path d="M580 115 L640 115" class="arrow"/>
+  <path d="M820 210 L820 220" class="arrow"/>
+  <path d="M420 330 L420 220" class="arrow"/>
+
+  <text x="48" y="350" class="text">Data movement: image bytes → inference → outputs & DB</text>
+
+</svg>
