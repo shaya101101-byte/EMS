@@ -121,3 +121,21 @@ section.content {
     margin-bottom: 30px;
   }
 }
+
+/* Full Screen Width Styling */
+.analytics-fullscreen {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    padding-left: 40px;
+    padding-right: 40px;
+}
+
+body {
+    overflow-x: hidden;
+}
+
+.analytics-card, .empty-state-card {
+    width: 100%;
+    max-width: 100%;
+}
