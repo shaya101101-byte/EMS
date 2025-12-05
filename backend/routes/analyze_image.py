@@ -4,6 +4,7 @@ from services.yolo_analyzer import initialize_model, analyze_image_bytes
 from database.db import insert_detection
 from datetime import datetime
 import traceback
+import json
 
 router = APIRouter()
 
@@ -42,6 +43,25 @@ async def analyze_image(file: UploadFile = File(...)):
         except Exception as e:
             print(f"⚠️ Warning: Could not save to database: {e}")
             # Don't fail the request if DB save fails; still return result
+            pass
+
+        # ✅ SAVE ANALYSIS DATA FOR FRONTEND (NEW)
+        try:
+            organism_counts = {p['class']: p['count'] for p in result.get('per_class', [])}
+            verdict_summary = result.get('overall_verdict', {})
+            crop_image_paths = result.get('crops', [])
+
+            result_data = {
+                "organism_counts": organism_counts,
+                "verdict": verdict_summary,
+                "crops": crop_image_paths
+            }
+
+            with open("latest_analysis.json", "w") as f:
+                json.dump(result_data, f)
+            print(f"✅ Latest analysis saved to latest_analysis.json")
+        except Exception as e:
+            print(f"⚠️ Warning: Could not save latest analysis: {e}")
             pass
 
         return JSONResponse(result)

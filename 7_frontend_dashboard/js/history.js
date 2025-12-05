@@ -684,3 +684,45 @@
         }
     }
 })();
+
+async function loadHistoryAnalytics() {
+    try {
+        const res = await fetch("http://127.0.0.1:8000/history_latest");
+        const data = await res.json();
+
+        // 1. Detections by Organism (Bar Chart)
+        if (data.organism_counts && Object.keys(data.organism_counts).length > 0) {
+            const ctx = document.getElementById("historyOrganismChart");
+            if (ctx && !ctx.Chart) {
+                new Chart(ctx, {
+                    type: "bar",
+                    data: {
+                        labels: Object.keys(data.organism_counts),
+                        datasets: [{
+                            data: Object.values(data.organism_counts),
+                            label: "Count"
+                        }]
+                    }
+                });
+            }
+        }
+
+        // 2. Verdict Distribution (Show Cropped Images)
+        const container = document.getElementById("verdictImages");
+        if (container && data.crops && data.crops.length > 0) {
+            data.crops.forEach(src => {
+                let img = document.createElement("img");
+                img.src = src;
+                img.style.width = "120px";
+                img.style.borderRadius = "8px";
+                img.style.border = "2px solid #ccc";
+                container.appendChild(img);
+            });
+        }
+
+    } catch (err) {
+        console.log("Error loading history data:", err);
+    }
+}
+
+window.addEventListener('load', loadHistoryAnalytics);

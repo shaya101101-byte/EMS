@@ -52,6 +52,20 @@ async def health():
 async def root():
     return {"message": "PlanktoVision API running", "docs": "/docs"}
 
+@app.get("/history_latest")
+def history_latest():
+    try:
+        import json
+        with open("latest_analysis.json", "r") as f:
+            data = json.load(f)
+        return data
+    except:
+        return {
+            "organism_counts": {},
+            "verdict": {"safe": 0, "warning": 0, "dangerous": 0},
+            "crops": []
+        }
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=8000)
