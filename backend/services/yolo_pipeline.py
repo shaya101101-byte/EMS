@@ -17,9 +17,9 @@ from PIL import Image
 
 
 class YoloPipeline:
-    def __init__(self, det_path: str = os.path.join('models', 'best.pt'),
-                 cls_path: str = os.path.join('models', 'bestc.pt'),
-                 device: Optional[str] = None):
+    def __init__(self, det_path: str = None,
+                 cls_path: str = None,
+                 device: Optional[str] = None, use_absolute_paths: bool = True):
         """Load detection and classification models.
 
         The constructor performs model loading once. It raises exceptions
@@ -30,9 +30,18 @@ class YoloPipeline:
         except Exception as e:
             raise ImportError("ultralytics is required for YoloPipeline: pip install ultralytics") from e
 
-        self.det_path = det_path
-        self.cls_path = cls_path
+        # Resolve default model paths relative to this services file to avoid CWD issues
+        services_dir = os.path.dirname(os.path.abspath(__file__))
+        backend_dir = os.path.dirname(services_dir)
+        self.det_path = det_path or os.path.join(backend_dir, 'models', 'best.pt')
+        self.cls_path = cls_path or os.path.join(backend_dir, 'models', 'bestc.pt')
         self.device = device
+
+        # Convert to absolute paths (defensive)
+        if use_absolute_paths and not os.path.isabs(self.det_path):
+            self.det_path = os.path.join(backend_dir, self.det_path)
+        if use_absolute_paths and not os.path.isabs(self.cls_path):
+            self.cls_path = os.path.join(backend_dir, self.cls_path)
 
         if not os.path.exists(self.det_path):
             raise FileNotFoundError(f"Detection model not found: {self.det_path}")

@@ -176,6 +176,58 @@
     <script src="js/api-client.js"></script>
     <script src="js/analytics.js"></script>
 
+    <!-- PDF Download Function -->
+    <script>
+    function downloadBackendPDF() {
+        // Get snapshot ID from sessionStorage or localStorage
+        let analysisData = null;
+        try {
+            analysisData = JSON.parse(sessionStorage.getItem('last_analysis') || localStorage.getItem('last_analysis') || localStorage.getItem('currentAnalysis'));
+        } catch (e) {
+            console.error('Could not parse analysis data', e);
+        }
+
+        if (!analysisData || !analysisData.id && !analysisData.snap_id && !analysisData.analysis_id) {
+            alert('No analysis ID found. Please upload and analyze an image first.');
+            return;
+        }
+
+        // Try to get ID from various possible fields
+        const snapId = analysisData.id || analysisData.snap_id || analysisData.analysis_id;
+        if (!snapId) {
+            alert('Cannot find analysis ID to download report.');
+            return;
+        }
+
+        // Construct download URL to backend /api/download-report endpoint
+        const downloadUrl = `http://127.0.0.1:8000/api/download-report/${snapId}/`;
+        console.log('Downloading PDF from:', downloadUrl);
+
+        // Trigger download
+        fetch(downloadUrl)
+            .then(resp => {
+                if (!resp.ok) throw new Error('Download failed: ' + resp.statusText);
+                return resp.blob();
+            })
+            .then(blob => {
+                // Create blob URL and trigger download
+                const blobUrl = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = blobUrl;
+                a.download = `aquasafe_report_${snapId}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(blobUrl);
+                document.body.removeChild(a);
+                console.log('PDF downloaded successfully');
+            })
+            .catch(err => {
+                console.error('PDF download error', err);
+                alert('Failed to download PDF: ' + err.message);
+            });
+    }
+    </script>
+
     <!-- Advanced Analytics & Visualization (added) -->
     <section id="advanced-analytics">
         <h3>Advanced Analytics & Visualization</h3>

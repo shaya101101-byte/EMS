@@ -68,96 +68,61 @@
         fileInput.dispatchEvent(new Event('change'));
     });
 
-    // Handle Analyze button click
+    // Handle Analyze button click - POST to backend /analyze and store result in sessionStorage
     analyzeBtn.addEventListener('click', async function() {
         if (!selectedFile) {
             alert('Please select an image first');
             return;
         }
 
-        // Validate file size (max 10MB)
-        const maxSize = 10 * 1024 * 1024; // 10MB
+        // Validate file size (max 20MB)
+        const maxSize = 20 * 1024 * 1024; // 20MB
         if (selectedFile.size > maxSize) {
-            results.innerHTML = `
-                <div style="padding: 20px; background: #FEE; border-radius: 8px; color: #C33; border-left: 4px solid #C33;">
-                    <strong>Error:</strong> File size must be less than 10MB. Your file is ${(selectedFile.size / 1024 / 1024).toFixed(2)}MB.
-                </div>
-            `;
+            results.innerHTML = `<div style="padding: 20px; background: #FEE; border-radius: 8px; color: #C33; border-left: 4px solid #C33;"><strong>Error:</strong> File size must be less than 20MB.</div>`;
             results.classList.add('show');
             return;
         }
 
-        // Validate file type
-        const validTypes = ['image/jpeg', 'image/png', 'image/jpg'];
+        // Allow any common image MIME type
+        const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp', 'image/tiff'];
         if (!validTypes.includes(selectedFile.type)) {
-            results.innerHTML = `
-                <div style="padding: 20px; background: #FEE; border-radius: 8px; color: #C33; border-left: 4px solid #C33;">
-                    <strong>Error:</strong> Please upload a JPG or PNG image. You uploaded a ${selectedFile.type} file.
-                </div>
-            `;
-            results.classList.add('show');
-            return;
+            // warn but still allow (backend will validate)
+            console.warn('Uploading unsupported mime type:', selectedFile.type);
         }
 
-        // Show loading modal
         showLoadingModal();
-
         try {
-            // Use centralized API client to upload image
-            const analysisData = await ApiClient.uploadImage(selectedFile);
+            const form = new FormData();
+            form.append('image', selectedFile, selectedFile.name);
 
-            // Check for error in response
-            if (analysisData.error) {
-                hideLoadingModal();
-                results.innerHTML = `
-                    <div style="padding: 20px; background: #FEE; border-radius: 8px; color: #C33; border-left: 4px solid #C33;">
-                        <strong>Error:</strong> ${analysisData.error}
-                    </div>
-                `;
+            const API = 'http://127.0.0.1:8000';
+            const resp = await fetch(`${API}/analyze`, { method: 'POST', body: form });
+            const data = await resp.json();
+
+            hideLoadingModal();
+
+            if (!resp.ok || !data || !data.success) {
+                const err = data && data.error ? data.error : 'Analyze failed';
+                results.innerHTML = `<div style="padding: 20px; background: #FEE; border-radius: 8px; color: #C33; border-left: 4px solid #C33;"><strong>Error:</strong> ${err}</div>`;
                 results.classList.add('show');
                 return;
             }
 
-            // Transform /predict response format to analytics.js format
-            const transformedData = transformPredictResponse(analysisData);
-
-            // --- SAFE STORAGE (prevents quota exceeded error) ---
+            // Save to sessionStorage for analytics page
             try {
-                // Remove large base64 images from response before saving
-                // Keep URLs (they're small strings) but exclude base64 (they're huge)
-                const { annotated_image_base64, pie_chart_base64, bar_chart_base64, pdf_base64, ...safeData } = transformedData;
-
-                // Save only text/small data to localStorage
-                localStorage.setItem('currentAnalysis', JSON.stringify(safeData));
-            } catch (storageError) {
-                // If storage still fails, try removing even more data
-                console.warn("Storage quota exceeded. Trying minimal data save.", storageError);
-                try {
-                    const { annotated_image_base64, pie_chart_base64, bar_chart_base64, pdf_base64, detections, per_class, ...minimalData } = transformedData;
-                    localStorage.setItem('currentAnalysis', JSON.stringify(minimalData));
-                } catch (finalError) {
-                    console.error("Cannot save analysis data to localStorage.", finalError);
-                    alert("Warning: Analysis data could not be saved. Results will show but won't persist on refresh.");
-                }
+                sessionStorage.setItem('last_analysis', JSON.stringify(data));
+            } catch (e) {
+                console.warn('sessionStorage failed, falling back to localStorage', e);
+                localStorage.setItem('last_analysis', JSON.stringify(data));
             }
 
-            // Hide loading modal
-            hideLoadingModal();
+            // Redirect to analytics page
+            window.location.href = 'analytics.html';
 
-            // Redirect to analytics.html
-            setTimeout(() => {
-                window.location.href = 'analytics.html';
-            }, 500);
-
-        } catch (error) {
+        } catch (err) {
             hideLoadingModal();
-            
-            // Show error message
-            results.innerHTML = `
-                <div style="padding: 20px; background: #FEE; border-radius: 8px; color: #C33; border-left: 4px solid #C33;">
-                    <strong>Error:</strong> ${error.message}
-                </div>
-            `;
+            console.error('Analyze error', err);
+            results.innerHTML = `<div style="padding: 20px; background: #FEE; border-radius: 8px; color: #C33; border-left: 4px solid #C33;"><strong>Error:</strong> ${err.message}</div>`;
             results.classList.add('show');
         }
     });

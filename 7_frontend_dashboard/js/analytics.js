@@ -20,7 +20,8 @@
      * They are handled gracefully with fallback placeholders below.
      */
     function displayCurrentAnalysis() {
-        const analysisJson = localStorage.getItem('currentAnalysis');
+        // Prefer sessionStorage (set by upload.js) but fallback to legacy localStorage
+        let analysisJson = sessionStorage.getItem('last_analysis') || localStorage.getItem('currentAnalysis') || localStorage.getItem('last_analysis');
         
         if (!analysisJson) {
             showNoCurrentAnalysis();
@@ -36,15 +37,57 @@
                 return;
             }
 
-            // Extract data from /analyze-image response
-            const totalDetections = analysis.total_detections || 0;
-            const perClass = analysis.per_class || [];
-            const overallVerdict = analysis.overall_verdict || { verdict: 'Unknown', reason: '' };
-            // Use URL-based annotated image (preferred) or fallback to base64
+            // Extract data from backend response (supports new YOLO backend output)
+            // totalDetections: prefer explicit field, else sum counts
+            const totalDetections = analysis.total_detections || analysis.total_count || (analysis.count ? Object.values(analysis.count).reduce((a,b)=>a+Number(b),0) : 0);
+
+            // perClass: if backend provided per_class, use it; otherwise build from count/max_confidence
+            let perClass = analysis.per_class || [];
+            if ((!perClass || perClass.length === 0) && analysis.count) {
+                perClass = Object.keys(analysis.count).map(name => ({
+                    class: name,
+                    count: analysis.count[name],
+                    percentage: totalDetections > 0 ? ((analysis.count[name] / totalDetections) * 100).toFixed(1) : 0,
+                    avg_confidence: (analysis.max_confidence && analysis.max_confidence[name]) ? analysis.max_confidence[name] : (analysis.max_confidence ? Math.max(...Object.values(analysis.max_confidence)) : 0),
+                    safety: 'Unknown',
+                    description: ''
+                }));
+            }
+
+            // Normalize perClass entries so analytics UI always finds the expected keys
+            perClass = (perClass || []).map(item => {
+                // item might come as {class_name, confidence, count} or legacy shapes
+                const resolvedClass = item.class || item.class_name || item.name || item.label || 'undefined';
+                const resolvedCount = (item.count !== undefined) ? item.count : (item.cnt !== undefined ? item.cnt : 0);
+                const resolvedPercentage = (item.percentage !== undefined) ? item.percentage : (item.percent !== undefined ? item.percent : (totalDetections > 0 ? ((resolvedCount / totalDetections) * 100).toFixed(1) : 0));
+                let resolvedAvgConf = null;
+                if (item.avg_confidence !== undefined) resolvedAvgConf = item.avg_confidence;
+                else if (item.avg_conf !== undefined) resolvedAvgConf = item.avg_conf;
+                else if (item.confidence !== undefined) resolvedAvgConf = item.confidence;
+                else if (analysis.max_confidence && analysis.max_confidence[resolvedClass] !== undefined) resolvedAvgConf = analysis.max_confidence[resolvedClass];
+                else resolvedAvgConf = 'undefined';
+
+                return {
+                    class: String(resolvedClass),
+                    count: Number(resolvedCount),
+                    percentage: typeof resolvedPercentage === 'number' ? resolvedPercentage : String(resolvedPercentage),
+                    avg_confidence: resolvedAvgConf,
+                    safety: item.safety || 'Unknown',
+                    description: item.description || ''
+                };
+            });
+
+            // Overall verdict: prefer safety_status or overall_verdict
+            const overallVerdict = (analysis.safety_status ? { verdict: analysis.safety_status, reason: '' } : (analysis.overall_verdict || { verdict: 'Unknown', reason: '' }));
+
+            // Annotated image: backend returns base64 in image_with_boxes
             const annotatedImageUrl = analysis.annotated_image_url || '';
-            const annotatedImageB64 = analysis.annotated_image_base64 || '';
+            const annotatedImageB64 = analysis.image_with_boxes || analysis.annotated_image_base64 || '';
             const pieChartB64 = analysis.pie_chart_base64 || '';
             const barChartB64 = analysis.bar_chart_base64 || '';
+
+            // Store snapshot ID for PDF download
+            window.currentSnapId = analysis.id || analysis.snap_id || analysis.analysis_id || null;
 
             // Safety verdict color
             const verdictColor = overallVerdict.verdict === 'Unsafe' ? '#FF6B6B' : 

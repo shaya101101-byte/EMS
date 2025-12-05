@@ -17,6 +17,8 @@ from reportlab.lib.utils import ImageReader
 from reportlab.lib.pagesizes import letter
 import numpy as np
 from PIL import Image
+import base64
+from ultralytics import YOLO
 
 router = APIRouter()
 
@@ -24,8 +26,10 @@ router = APIRouter()
 # GLOBALS & DIRECTORIES
 # ============================================
 snapshots_store = {}
-SNAPSHOT_DIR = "backend/snapshots"
-ANNOTATED_DIR = "backend/annotated"
+# Use absolute paths based on backend directory location
+BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SNAPSHOT_DIR = os.path.join(BACKEND_DIR, "snapshots")
+ANNOTATED_DIR = os.path.join(BACKEND_DIR, "annotated")
 
 # Ensure directories exist
 Path(SNAPSHOT_DIR).mkdir(parents=True, exist_ok=True)
@@ -213,6 +217,178 @@ async def analyze_snapshot(snap_id: int, request: Request):
     except Exception as e:
         print(f"❌ Analysis failed: {e}")
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+
+
+# --- INSERT: POST /analyze (accept uploaded image and return YOLO results) ---
+def _ensure_models(app):
+    """Lazily load detection and classification models and cache on app.state."""
+    if getattr(app.state, 'yolo_models', None) is not None:
+        return app.state.yolo_models
+
+    # Use absolute paths for model loading
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    det_path = os.path.join(base_dir, 'models', 'best.pt')
+    cls_path = os.path.join(base_dir, 'models', 'bestc.pt')
+
+    print(f"[DEBUG] Loading detection model from: {det_path}")
+    print(f"[DEBUG] Loading classification model from: {cls_path}")
+    
+    det_model = YOLO(det_path)
+    cls_model = YOLO(cls_path)
+
+    app.state.yolo_models = { 'det': det_model, 'cls': cls_model }
+    return app.state.yolo_models
+
+
+@router.post('/analyze')
+async def analyze_upload(image: UploadFile = File(...), request: Request = None):
+    """Accept uploaded image, run detection+classification, return JSON with base64 annotated image and snapshot ID for PDF download."""
+    try:
+        if image is None:
+            raise HTTPException(status_code=400, detail='No file uploaded')
+
+        # Save snapshot first so we have an ID for PDF download
+        snap_id = int(datetime.utcnow().timestamp() * 1000)
+        contents = await image.read()
+        img_path = f"{SNAPSHOT_DIR}/{snap_id}.jpg"
+        with open(img_path, "wb") as f:
+            f.write(contents)
+        
+        snapshots_store[snap_id] = {
+            "path": img_path,
+            "timestamp": datetime.utcnow().isoformat(),
+            "filename": image.filename,
+            "analyzed": False
+        }
+        print(f"📸 Snapshot saved: ID={snap_id}")
+
+        models = _ensure_models(request.app if request is not None else None)
+        det_model = models['det']
+        cls_model = models['cls']
+
+        nparr = np.frombuffer(contents, np.uint8)
+        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        if img is None:
+            raise HTTPException(status_code=400, detail='Invalid image')
+
+        # Run detection
+        det_res = det_model(img, conf=0.25)
+        det0 = det_res[0]
+
+        detections = []
+        annotated = img.copy()
+
+        boxes = []
+        try:
+            if hasattr(det0, 'boxes') and det0.boxes is not None:
+                xyxy = det0.boxes.xyxy.cpu().numpy()
+                confs = det0.boxes.conf.cpu().numpy()
+                cls_idxs = det0.boxes.cls.cpu().numpy() if hasattr(det0.boxes, 'cls') else [0]*len(confs)
+                for (b, c, cf) in zip(xyxy, cls_idxs, confs):
+                    x1, y1, x2, y2 = [int(v) for v in b]
+                    boxes.append((x1, y1, x2, y2, int(c), float(cf)))
+        except Exception:
+            boxes = []
+
+        for (x1, y1, x2, y2, cls_idx, det_conf) in boxes:
+            h, w = img.shape[:2]
+            x1c, y1c = max(0, x1), max(0, y1)
+            x2c, y2c = min(w-1, x2), min(h-1, y2)
+            if x2c <= x1c or y2c <= y1c:
+                continue
+
+            crop = img[y1c:y2c, x1c:x2c]
+            # classify crop
+            try:
+                cls_res = cls_model(cv2.cvtColor(crop, cv2.COLOR_BGR2RGB))
+                r0 = cls_res[0]
+                class_name = None
+                class_conf = None
+                if getattr(r0, 'probs', None) is not None:
+                    try:
+                        arr = r0.probs.cpu().numpy()
+                    except Exception:
+                        arr = np.array(r0.probs)
+                    top_idx = int(np.argmax(arr))
+                    top_conf = float(np.max(arr))
+                    class_name = cls_model.names.get(top_idx, str(top_idx)) if getattr(cls_model, 'names', None) else str(top_idx)
+                    class_conf = top_conf
+                elif getattr(r0, 'boxes', None) is not None and len(r0.boxes) > 0:
+                    p = r0.boxes[0]
+                    class_conf = float(getattr(p, 'conf', det_conf))
+                    class_name = cls_model.names.get(int(getattr(p, 'cls', 0)), str(int(getattr(p, 'cls', 0))))
+                else:
+                    class_name = det_model.names.get(cls_idx, f'class_{cls_idx}') if getattr(det_model, 'names', None) else f'class_{cls_idx}'
+                    class_conf = float(det_conf)
+            except Exception:
+                class_name = det_model.names.get(cls_idx, f'class_{cls_idx}') if getattr(det_model, 'names', None) else f'class_{cls_idx}'
+                class_conf = float(det_conf)
+
+            detections.append({
+                'class_name': str(class_name),
+                'confidence': float(round(class_conf, 4)),
+                'bbox': [int(x1c), int(y1c), int(x2c), int(y2c)]
+            })
+
+            # draw
+            color = (0,255,0)
+            cv2.rectangle(annotated, (x1c, y1c), (x2c, y2c), color, 2)
+            label = f"{class_name} {class_conf:.2f}"
+            cv2.putText(annotated, label, (x1c, max(10, y1c-6)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1)
+
+        counts = {}
+        max_conf = {}
+        for d in detections:
+            cname = d['class_name']
+            counts[cname] = counts.get(cname, 0) + 1
+            max_conf[cname] = max(max_conf.get(cname, 0.0), float(d['confidence']))
+
+        unsafe_classes = {'rotifer', 'parasite', 'pathogen'}
+        safety_status = 'Safe'
+        for cname in counts.keys():
+            if cname.lower() in unsafe_classes:
+                safety_status = 'Unsafe'
+                break
+
+        # Save annotated image for PDF and static serve
+        annotated_filename = f"{snap_id}_annotated.jpg"
+        annotated_path = os.path.join(ANNOTATED_DIR, annotated_filename)
+        try:
+            cv2.imwrite(annotated_path, annotated)
+            print(f"💾 Annotated image saved: {annotated_path}")
+        except Exception as e:
+            print(f"⚠️ Failed to save annotated image: {e}")
+            annotated_path = None
+
+        # Update snapshot store with analysis
+        snapshots_store[snap_id]["analyzed"] = True
+        snapshots_store[snap_id]["annotated_image"] = annotated_path
+        snapshots_store[snap_id]["detections"] = detections
+        snapshots_store[snap_id]["counts"] = counts
+
+        success, enc = cv2.imencode('.jpg', annotated)
+        if success:
+            b64 = base64.b64encode(enc.tobytes()).decode('utf-8')
+        else:
+            b64 = ''
+
+        return {
+            'success': True,
+            'id': snap_id,
+            'detections': detections,
+            'count': counts,
+            'max_confidence': {k: float(round(v,4)) for k,v in max_conf.items()},
+            'safety_status': safety_status,
+            'image_with_boxes': b64
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print('Analyze upload failed:', e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+# --- END INSERT ---
 
 
 # ============================================

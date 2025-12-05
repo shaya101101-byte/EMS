@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Dict, List, Tuple
 import numpy as np
 from io import BytesIO
+import logging
 
 try:
     from ultralytics import YOLO
@@ -84,21 +85,26 @@ class AquaSafeAI:
             file_dir = os.path.dirname(os.path.abspath(__file__))
             model_path = os.path.join(file_dir, "models", "best.pt")
         self.model_path = model_path
-        self.output_dir = Path(output_dir)
+
+        # Resolve output and history paths relative to this module file directory
+        file_dir = os.path.dirname(os.path.abspath(__file__))
+        default_output = Path(file_dir) / "outputs"
+        # If caller used default string keep backwards compatible behaviour otherwise use provided path
+        self.output_dir = Path(output_dir) if output_dir != "backend/outputs" else default_output
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.model = None
-        self.history_file = Path("backend/history.json")
+        self.history_file = Path(file_dir) / "history.json"
         
         # Load YOLO model if available
         if YOLO_AVAILABLE and os.path.exists(model_path):
             try:
                 self.model = YOLO(model_path)
-            except Exception as e:
-                print(f"Warning: Could not load YOLO model from {model_path}: {e}")
+            except Exception:
+                logging.getLogger(__name__).exception("Could not load YOLO model from %s", model_path)
         elif YOLO_AVAILABLE:
-            print(f"Warning: Model file not found at {model_path}. Using mock mode.")
+            logging.getLogger(__name__).warning("Model file not found at %s. Using mock mode.", model_path)
         else:
-            print("Warning: Ultralytics YOLO not installed. Install with: pip install ultralytics")
+            logging.getLogger(__name__).warning("Ultralytics YOLO not installed. Install with: pip install ultralytics")
     
     def _mock_inference(self, image_array: np.ndarray) -> Dict:
         """
@@ -148,8 +154,8 @@ class AquaSafeAI:
                         detections["boxes"].append([x1, y1, x2, y2, cls, conf])
             
             return detections
-        except Exception as e:
-            print(f"Error during detection: {e}")
+        except Exception:
+            logging.getLogger(__name__).exception("Error during detection")
             return self._mock_inference(image_array)
     
     def annotate_image(self, image_array: np.ndarray, detections: Dict) -> np.ndarray:
@@ -264,8 +270,8 @@ class AquaSafeAI:
             plt.close(fig)
             
             return str(pie_file.relative_to(Path("backend")))
-        except Exception as e:
-            print(f"Error generating pie chart: {e}")
+        except Exception:
+            logging.getLogger(__name__).exception("Error generating pie chart")
             return ""
     
     def generate_bar_chart(self, counts: Dict) -> str:
@@ -301,8 +307,8 @@ class AquaSafeAI:
             plt.close(fig)
             
             return str(bar_file.relative_to(Path("backend")))
-        except Exception as e:
-            print(f"Error generating bar chart: {e}")
+        except Exception:
+            logging.getLogger(__name__).exception("Error generating bar chart")
             return ""
     
     def generate_pdf_report(self, annotated_image: np.ndarray, counts: Dict, percentages: Dict, 
@@ -385,15 +391,15 @@ class AquaSafeAI:
             story.append(Spacer(1, 0.2*inch))
             
             # Add charts if available
-            if pie_chart_path and os.path.exists(self.output_dir / pie_chart_path.split('/')[-1]):
+            if pie_chart_path and os.path.exists(self.output_dir / Path(pie_chart_path).name):
                 story.append(PageBreak())
                 story.append(Paragraph("<b>Charts:</b>", styles['Heading2']))
-                pie_img = Image(str(self.output_dir / pie_chart_path.split('/')[-1]), width=4*inch, height=3*inch)
+                pie_img = Image(str(self.output_dir / Path(pie_chart_path).name), width=4*inch, height=3*inch)
                 story.append(pie_img)
                 story.append(Spacer(1, 0.2*inch))
             
-            if bar_chart_path and os.path.exists(self.output_dir / bar_chart_path.split('/')[-1]):
-                bar_img = Image(str(self.output_dir / bar_chart_path.split('/')[-1]), width=5*inch, height=3*inch)
+            if bar_chart_path and os.path.exists(self.output_dir / Path(bar_chart_path).name):
+                bar_img = Image(str(self.output_dir / Path(bar_chart_path).name), width=5*inch, height=3*inch)
                 story.append(bar_img)
             
             doc.build(story)
@@ -403,8 +409,8 @@ class AquaSafeAI:
                 os.remove(temp_img_path)
             
             return str(pdf_file.relative_to(Path("backend")))
-        except Exception as e:
-            print(f"Error generating PDF: {e}")
+        except Exception:
+            logging.getLogger(__name__).exception("Error generating PDF")
             return ""
     
     def save_to_history(self, analysis_result: Dict) -> None:
@@ -431,8 +437,8 @@ class AquaSafeAI:
             
             with open(self.history_file, 'w') as f:
                 json.dump(history, f, indent=2)
-        except Exception as e:
-            print(f"Error saving to history: {e}")
+        except Exception:
+            logging.getLogger(__name__).exception("Error saving to history")
     
     def analyze_image(self, image_array: np.ndarray) -> Dict:
         """

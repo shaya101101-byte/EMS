@@ -106,10 +106,10 @@ body.history-page .content {
 /* Confidence stat cards */
 .stat-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; }
 
-.stat-card { background:#f8fbff; padding:18px; border-radius:10px; box-shadow: 0 8px 24px rgba(8,30,70,0.03); }
+.stat-card { background:#ffffff; padding:18px; border-radius:10px; box-shadow: 0 8px 24px rgba(2,24,42,0.03); }
 
-.stat-card .stat-label { font-size:13px; color:#667085; }
-.stat-card .stat-value { font-size:22px; font-weight:700; color:#0b4a8b; }
+.stat-card .stat-label { font-size:13px; color:#6b7280; }
+.stat-card .stat-value { font-size:22px; font-weight:700; color:#00ADEF; }
 
 /* Recent list */
 .recent-list { list-style:none; padding:0; margin:0; color:#233; font-size:15px; }
@@ -118,7 +118,7 @@ body.history-page .content {
 
 /* All Detections wrapper improvements */
 .history-list { padding: 6px 0; }
-.history-list .card { border-radius: 12px; box-shadow: 0 8px 24px rgba(8,30,70,0.04); }
+..history-list .card { border-radius: 12px; box-shadow: 0 8px 24px rgba(2,24,42,0.04); }
 
 /* Navbar logo restored - no hiding rule applied */
 

@@ -1,17 +1,18 @@
-/* assets/styles.css - simple modern styling */
-body { background: #f6f9fc; color: #0f172a; }
+/* assets/styles.css - sky-blue & white theme */
+body { background: #ffffff; color: #072033; }
 section.main { padding-top: 10px; }
 .card {
-  background: white;
+  background: #ffffff;
   border-radius: 8px;
   padding: 12px;
-  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.06);
+  box-shadow: 0 6px 20px rgba(2,24,42,0.06);
   margin-bottom: 12px;
+  border: 1px solid rgba(2,24,42,0.03);
 }
 .header {
   display:flex; align-items:center; gap:12px;
 }
 .metric {
-  padding: 8px; border-radius:6px; background: #f8fafc; display:inline-block;
+  padding: 8px; border-radius:6px; background: rgba(0,173,239,0.06); color: #00ADEF; display:inline-block;
 }
 .small { font-size: 0.85rem; color:#6b7280; }
