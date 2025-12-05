@@ -142,5 +142,19 @@ def generate_report():
     except Exception as e:
         return {"error": str(e)}
 
+@app.get("/history_latest")
+def history_latest():
+    try:
+        import json
+        with open("latest_analysis.json", "r") as f:
+            data = json.load(f)
+        return data
+    except:
+        return {
+            "organism_counts": {},
+            "verdict": {"safe": 0, "warning": 0, "dangerous": 0},
+            "crops": []
+        }
+
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

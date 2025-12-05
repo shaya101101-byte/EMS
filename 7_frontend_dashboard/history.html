@@ -56,10 +56,12 @@
                 <div style="flex:1 1 360px; background:#fff; padding:12px; border-radius:6px; border:1px solid #e0e0e0; box-shadow:0 2px 4px rgba(0,0,0,0.05)">
                     <div style="color:#333; font-weight:600; font-size:14px; margin-bottom:10px">Detections by Organism</div>
                     <canvas id="bar-chart" width="400" height="180" style="width:100%; height:auto"></canvas>
+                    <canvas id="historyOrganismChart"></canvas>
                 </div>
                 <div style="flex:1 1 240px; background:#fff; padding:12px; border-radius:6px; border:1px solid #e0e0e0; box-shadow:0 2px 4px rgba(0,0,0,0.05)">
                     <div style="color:#333; font-weight:600; font-size:14px; margin-bottom:10px">Verdict Distribution</div>
                     <canvas id="pie-chart" width="220" height="180" style="width:100%; height:auto"></canvas>
+                    <div id="verdictImages" style="display:flex; gap:10px;"></div>
                 </div>
                 <div style="flex:1 1 300px; background:#fff; padding:12px; border-radius:6px; border:1px solid #e0e0e0; box-shadow:0 2px 4px rgba(0,0,0,0.05)">
                     <div style="color:#333; font-weight:600; font-size:14px; margin-bottom:10px">Confidence Summary</div>
